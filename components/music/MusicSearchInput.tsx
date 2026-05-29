@@ -1,46 +1,49 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 interface MusicSearchInputProps {
-  value: string;
-  onChange: (value: string) => void;
+  onSearch: (value: string) => void;
+  disabled?: boolean;
   placeholder?: string;
-  debounceMs?: number;
 }
 
 export function MusicSearchInput({
-  value,
-  onChange,
+  onSearch,
+  disabled = false,
   placeholder = "Search songs, artists, albums...",
-  debounceMs = 500,
 }: MusicSearchInputProps) {
-  const [localValue, setLocalValue] = useState(value);
+  const [localValue, setLocalValue] = useState("");
 
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      onChange(localValue);
-    }, debounceMs);
-
-    return () => window.clearTimeout(timer);
-  }, [localValue, debounceMs, onChange]);
+  function submitSearch() {
+    onSearch(localValue.trim());
+  }
 
   return (
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        value={localValue}
-        onChange={(event) => setLocalValue(event.target.value)}
-        placeholder={placeholder}
-        className="h-11 pl-9"
-      />
-    </div>
+    <form
+      className="flex gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        submitSearch();
+      }}
+    >
+      <div className="relative flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          value={localValue}
+          onChange={(event) => setLocalValue(event.target.value)}
+          placeholder={placeholder}
+          className="h-11 pl-9"
+          disabled={disabled}
+        />
+      </div>
+      <Button type="submit" className="h-11 px-5" disabled={disabled}>
+        Search
+      </Button>
+    </form>
   );
 }

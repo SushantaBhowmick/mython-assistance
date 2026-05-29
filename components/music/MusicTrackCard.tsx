@@ -8,11 +8,11 @@ import {
   Play,
   Save,
 } from "lucide-react";
-import Image from "next/image";
 import { useState } from "react";
 import { toast } from "sonner";
 
 import { AddToPlaylistDialog } from "@/components/music/AddToPlaylistDialog";
+import { TrackThumbnail } from "@/components/music/TrackThumbnail";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -108,23 +108,18 @@ export function MusicTrackCard({
     <>
       <div
         className={cn(
-          "group flex items-center gap-3 rounded-xl border bg-card/50 p-3 transition-colors hover:bg-accent/40",
+          "group flex items-center gap-3 rounded-xl border bg-card/50 p-3 transition-colors hover:bg-accent/40 cursor-pointer",
           isCurrent && "border-primary/40 bg-accent/30",
           className,
         )}
+        onClick={handlePlay}
       >
         <button
           type="button"
-          onClick={handlePlay}
+          
           className="relative size-14 shrink-0 overflow-hidden rounded-lg"
         >
-          <Image
-            src={track.thumbnailUrl}
-            alt={track.title}
-            fill
-            className="object-cover"
-            sizes="56px"
-          />
+          <TrackThumbnail src={track.thumbnailUrl} alt={track.title} />
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
             {playing ? (
               <Pause className="size-5 text-white" />

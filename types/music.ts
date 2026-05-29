@@ -1,3 +1,5 @@
+export type SearchSource = "cache" | "youtube" | "local-fallback";
+
 export interface MusicTrack {
   id?: string;
   videoId: string;
@@ -29,17 +31,40 @@ export interface PlaylistDetail extends Omit<PlaylistSummary, "trackCount"> {
 }
 
 export interface HistoryEntry {
-  id: string;
-  playedAt: string;
   track: SavedTrack;
+  playCount: number;
+  firstPlayedAt: string;
+  lastPlayedAt: string;
 }
 
 export interface YouTubeSearchResponse {
   tracks: MusicTrack[];
+  items?: MusicTrack[];
   cached: boolean;
   query: string;
+  source?: SearchSource;
+  matchedQuery?: string;
+  fuzzy?: boolean;
+  stale?: boolean;
+  quotaExceeded?: boolean;
+  message?: string;
+}
+
+export interface YouTubeQuotaStatus {
+  estimatedSearchCallsToday: number;
+  liveSearchDisabled: boolean;
+  quotaFallbackActive: boolean;
+  lastQuotaErrorAt: string | null;
+  liveSearchDisabledUntil: string | null;
+  cooldownHours: number;
+}
+
+export interface RecommendationItem {
+  track: MusicTrack;
+  reason: string;
 }
 
 export interface ApiErrorResponse {
   error: string;
+  code?: string;
 }

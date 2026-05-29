@@ -5,6 +5,7 @@ import {
   Play,
   RotateCcw,
   RotateCw,
+  Shuffle,
   SkipBack,
   SkipForward,
   Volume2,
@@ -38,6 +39,8 @@ export function PlayerControls({ variant = "mini", className }: PlayerControlsPr
     seekTo,
     setVolume,
     setMuted,
+    shuffleEnabled,
+    toggleShuffle,
   } = usePlayerStore();
 
   const maxDuration = duration > 0 ? duration : Math.max(currentTime, 1);
@@ -95,6 +98,15 @@ export function PlayerControls({ variant = "mini", className }: PlayerControlsPr
         </div>
 
         <div className="flex flex-1 items-center justify-center gap-1">
+          <Button
+            variant={shuffleEnabled ? "secondary" : "ghost"}
+            size="icon-sm"
+            onClick={toggleShuffle}
+            aria-label={shuffleEnabled ? "Disable shuffle" : "Enable shuffle"}
+            aria-pressed={shuffleEnabled}
+          >
+            <Shuffle className="size-4" />
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"

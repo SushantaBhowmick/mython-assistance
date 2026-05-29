@@ -2,11 +2,11 @@ import type { MusicTrack } from "@/types/music";
 import type { SavedTrack as PrismaSavedTrack } from "@prisma/client";
 
 export function normalizeSearchQuery(query: string): string {
-  return query.trim().toLowerCase();
+  return query.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export const MIN_SEARCH_QUERY_LENGTH = 2;
-export const CACHE_EXPIRY_DAYS = 7;
+export const MIN_SEARCH_QUERY_LENGTH = 3;
+export const CACHE_EXPIRY_DAYS = 90;
 
 export function getCacheExpiryDate(from = new Date()): Date {
   const expiresAt = new Date(from);

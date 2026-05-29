@@ -15,7 +15,9 @@ export type PlayerStateName =
 interface PlayerStoreState {
   currentTrack: MusicTrack | null;
   queue: MusicTrack[];
+  originalQueue: MusicTrack[];
   currentIndex: number;
+  shuffleEnabled: boolean;
   isPlaying: boolean;
   isReady: boolean;
   duration: number;
@@ -30,9 +32,11 @@ interface PlayerStoreState {
 interface PlayerStoreActions {
   setTrack: (track: MusicTrack, queue?: MusicTrack[]) => void;
   playTrack: (track: MusicTrack, queue?: MusicTrack[], startAt?: number) => void;
+  playShuffledQueue: (tracks: MusicTrack[]) => void;
   pause: () => void;
   resume: () => void;
   togglePlay: () => void;
+  toggleShuffle: () => void;
   seekTo: (seconds: number) => void;
   skipBy: (deltaSeconds: number) => void;
   setDuration: (duration: number) => void;
@@ -54,7 +58,9 @@ export type PlayerStore = PlayerStoreState & PlayerStoreActions;
 const initialState: PlayerStoreState = {
   currentTrack: null,
   queue: [],
+  originalQueue: [],
   currentIndex: -1,
+  shuffleEnabled: false,
   isPlaying: false,
   isReady: false,
   duration: 0,
@@ -78,6 +84,52 @@ function resolveQueueIndex(queue: MusicTrack[], track: MusicTrack) {
   return index >= 0 ? index : 0;
 }
 
+export function shuffleQueueItems(
+  queue: MusicTrack[],
+  currentTrack?: MusicTrack | null,
+): MusicTrack[] {
+  if (queue.length <= 1) return [...queue];
+
+  const copy = [...queue];
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  if (
+    currentTrack &&
+    copy.length > 1 &&
+    copy[0]?.videoId === currentTrack.videoId
+  ) {
+    [copy[0], copy[1]] = [copy[1], copy[0]];
+  }
+
+  return copy;
+}
+
+function buildQueueState(
+  track: MusicTrack,
+  queue: MusicTrack[],
+  shuffleEnabled: boolean,
+) {
+  const resolvedQueue = queue.length > 0 ? queue : [track];
+
+  if (shuffleEnabled && resolvedQueue.length > 1) {
+    const shuffled = shuffleQueueItems(resolvedQueue, track);
+    return {
+      queue: shuffled,
+      originalQueue: resolvedQueue,
+      currentIndex: resolveQueueIndex(shuffled, track),
+    };
+  }
+
+  return {
+    queue: resolvedQueue,
+    originalQueue: shuffleEnabled ? resolvedQueue : [],
+    currentIndex: resolveQueueIndex(resolvedQueue, track),
+  };
+}
+
 export const usePlayerStore = create<PlayerStore>()(
   persist(
     (set, get) => ({
@@ -85,29 +137,86 @@ export const usePlayerStore = create<PlayerStore>()(
 
       setTrack: (track, queue) => {
         const nextQueue = queue ?? get().queue;
+        const queueState = buildQueueState(
+          track,
+          nextQueue.length > 0 ? nextQueue : [track],
+          get().shuffleEnabled,
+        );
+
         set({
           currentTrack: track,
-          queue: nextQueue.length > 0 ? nextQueue : [track],
-          currentIndex: resolveQueueIndex(
-            nextQueue.length > 0 ? nextQueue : [track],
-            track,
-          ),
+          ...queueState,
         });
       },
 
       playTrack: (track, queue, startAt = 0) => {
         const nextQueue = queue ?? get().queue;
-        const resolvedQueue = nextQueue.length > 0 ? nextQueue : [track];
+        const queueState = buildQueueState(track, nextQueue, get().shuffleEnabled);
 
         set({
           currentTrack: track,
-          queue: resolvedQueue,
-          currentIndex: resolveQueueIndex(resolvedQueue, track),
+          ...queueState,
           isPlaying: true,
           lastKnownTime: startAt,
           currentTime: startAt,
           duration: 0,
           playerState: "buffering",
+        });
+      },
+
+      playShuffledQueue: (tracks) => {
+        if (tracks.length === 0) return;
+
+        const shuffled = shuffleQueueItems(tracks);
+        set({
+          shuffleEnabled: true,
+          originalQueue: tracks,
+          queue: shuffled,
+          currentTrack: shuffled[0],
+          currentIndex: 0,
+          isPlaying: true,
+          lastKnownTime: 0,
+          currentTime: 0,
+          duration: 0,
+          playerState: "buffering",
+        });
+      },
+
+      toggleShuffle: () => {
+        const { shuffleEnabled, queue, originalQueue, currentTrack, currentIndex } =
+          get();
+
+        if (shuffleEnabled) {
+          const base = originalQueue.length > 0 ? originalQueue : queue;
+          const index = currentTrack
+            ? base.findIndex((item) => item.videoId === currentTrack.videoId)
+            : currentIndex;
+
+          set({
+            shuffleEnabled: false,
+            queue: base,
+            originalQueue: [],
+            currentIndex: index >= 0 ? index : 0,
+          });
+          return;
+        }
+
+        const base = queue.length > 0 ? queue : [];
+        if (base.length <= 1) {
+          set({ shuffleEnabled: true, originalQueue: base });
+          return;
+        }
+
+        const shuffled = shuffleQueueItems(base, currentTrack);
+        const index = currentTrack
+          ? shuffled.findIndex((item) => item.videoId === currentTrack.videoId)
+          : currentIndex;
+
+        set({
+          shuffleEnabled: true,
+          originalQueue: base,
+          queue: shuffled,
+          currentIndex: index >= 0 ? index : 0,
         });
       },
 
@@ -199,7 +308,22 @@ export const usePlayerStore = create<PlayerStore>()(
         get().playTrack(queue[prevIndex], queue, 0);
       },
 
-      setQueue: (queue) => set({ queue }),
+      setQueue: (queue) => {
+        const { shuffleEnabled, currentTrack } = get();
+        if (shuffleEnabled && queue.length > 1) {
+          const shuffled = shuffleQueueItems(queue, currentTrack);
+          set({
+            queue: shuffled,
+            originalQueue: queue,
+            currentIndex: currentTrack
+              ? resolveQueueIndex(shuffled, currentTrack)
+              : get().currentIndex,
+          });
+          return;
+        }
+
+        set({ queue, originalQueue: shuffleEnabled ? queue : [] });
+      },
 
       clearPlayer: () => {
         if (playerController.isReady()) {
@@ -209,6 +333,7 @@ export const usePlayerStore = create<PlayerStore>()(
           ...initialState,
           volume: get().volume,
           muted: get().muted,
+          shuffleEnabled: get().shuffleEnabled,
           hasHydrated: true,
         });
       },
@@ -221,7 +346,9 @@ export const usePlayerStore = create<PlayerStore>()(
       partialize: (state) => ({
         currentTrack: state.currentTrack,
         queue: state.queue,
+        originalQueue: state.originalQueue,
         currentIndex: state.currentIndex,
+        shuffleEnabled: state.shuffleEnabled,
         volume: state.volume,
         muted: state.muted,
         lastKnownTime: state.lastKnownTime,

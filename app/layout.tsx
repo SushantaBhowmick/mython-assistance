@@ -19,13 +19,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Assistant PWA",
-  description: "Personal music and daily assistant PWA",
+  title: {
+    default: "Mython",
+    template: "%s · Mython",
+  },
+  description: "Your personal assistant — music, daily tools, and more.",
   applicationName: "Mython",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Assistant",
+    title: "Mython",
     statusBarStyle: "black-translucent",
   },
   icons: {

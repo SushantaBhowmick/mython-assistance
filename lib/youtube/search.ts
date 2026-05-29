@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getServerEnv } from "@/lib/env";
+import { parseYouTubeSearchError } from "@/lib/youtube/errors";
 import type { MusicTrack } from "@/types/music";
 
 interface YouTubeSearchItem {
@@ -96,7 +97,7 @@ export async function searchYouTube(query: string): Promise<MusicTrack[]> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new Error(`YouTube search failed (${response.status}): ${body}`);
+    throw parseYouTubeSearchError(response.status, body);
   }
 
   const data = (await response.json()) as YouTubeSearchResponse;

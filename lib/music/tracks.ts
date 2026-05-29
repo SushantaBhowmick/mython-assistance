@@ -2,6 +2,7 @@ import { getUserId } from "@/lib/auth/user";
 import { prisma } from "@/lib/prisma/client";
 import type { MusicTrack } from "@/types/music";
 import { toSavedTrack } from "@/lib/music/normalize";
+import { warmSearchCacheFromTrack } from "@/lib/youtube/cache-warm";
 import type { musicTrackInputSchema } from "@/lib/music/schemas";
 import type { z } from "zod";
 
@@ -35,7 +36,10 @@ export async function upsertSavedTrack(
     },
   });
 
-  return toSavedTrack(saved);
+  const savedTrack = toSavedTrack(saved);
+  await warmSearchCacheFromTrack(savedTrack);
+
+  return savedTrack;
 }
 
 export async function resolveTrackId(

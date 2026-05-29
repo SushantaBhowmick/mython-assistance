@@ -13,3 +13,5 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+export { isTransientPrismaError, safePrismaRead, withPrismaRetry } from "@/lib/prisma/retry";

@@ -3,21 +3,78 @@ import type {
   MusicTrack,
   PlaylistDetail,
   PlaylistSummary,
+  RecommendationItem,
   SavedTrack,
+  YouTubeQuotaStatus,
   YouTubeSearchResponse,
 } from "@/types/music";
 
+import {
+  getClientSearchCache,
+  setClientSearchCache,
+} from "@/lib/music/search-client-cache";
+
+export class ApiClientError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+  ) {
+    super(message);
+    this.name = "ApiClientError";
+  }
+}
+
 async function parseJson<T>(response: Response): Promise<T> {
-  const data = (await response.json()) as T & { error?: string };
+  const data = (await response.json()) as T & { error?: string; code?: string };
   if (!response.ok) {
-    throw new Error(data.error ?? "Request failed");
+    throw new ApiClientError(
+      data.error ?? "Request failed",
+      response.status,
+      data.code,
+    );
   }
   return data;
 }
 
-export async function searchMusic(query: string): Promise<YouTubeSearchResponse> {
-  const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`);
-  return parseJson<YouTubeSearchResponse>(response);
+let searchInFlight = new Map<string, Promise<YouTubeSearchResponse>>();
+
+export async function searchMusic(
+  query: string,
+  signal?: AbortSignal,
+): Promise<YouTubeSearchResponse> {
+  const trimmed = query.trim();
+  const normalized = trimmed.toLowerCase();
+
+  const cached = getClientSearchCache(normalized);
+  if (cached) {
+    return cached;
+  }
+
+  const pending = searchInFlight.get(normalized);
+  if (pending) {
+    return pending;
+  }
+
+  const promise = fetch(`/api/youtube/search?q=${encodeURIComponent(trimmed)}`, {
+    signal,
+  })
+    .then((response) => parseJson<YouTubeSearchResponse>(response))
+    .then((result) => {
+      setClientSearchCache(normalized, result);
+      return result;
+    })
+    .finally(() => {
+      searchInFlight.delete(normalized);
+    });
+
+  searchInFlight.set(normalized, promise);
+  return promise;
+}
+
+export async function getYouTubeQuotaStatus(): Promise<YouTubeQuotaStatus> {
+  const response = await fetch("/api/youtube/quota-status");
+  return parseJson(response);
 }
 
 export async function saveTrack(track: MusicTrack): Promise<{ track: SavedTrack }> {
@@ -109,7 +166,37 @@ export async function recordHistory(input: { track?: MusicTrack; trackId?: strin
   return parseJson<{ entry: HistoryEntry }>(response);
 }
 
-export async function getHistory(): Promise<{ history: HistoryEntry[] }> {
-  const response = await fetch("/api/history");
+export async function getHistory(options?: {
+  sort?: "recent" | "most-played";
+  limit?: number;
+}): Promise<{ history: HistoryEntry[] }> {
+  const params = new URLSearchParams();
+  if (options?.sort) params.set("sort", options.sort);
+  if (options?.limit) params.set("limit", String(options.limit));
+  const query = params.toString();
+  const response = await fetch(`/api/history${query ? `?${query}` : ""}`);
   return parseJson(response);
+}
+
+export async function getRecommendations(options?: {
+  limit?: number;
+  exclude?: string;
+}): Promise<{ items: RecommendationItem[] }> {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.exclude) params.set("exclude", options.exclude);
+  const query = params.toString();
+  const response = await fetch(`/api/recommendations${query ? `?${query}` : ""}`);
+  return parseJson(response);
+}
+
+export async function getDiscoveries(limit = 20): Promise<{ tracks: MusicTrack[]; cached: boolean }> {
+  const response = await fetch(`/api/discoveries?limit=${limit}`);
+  return parseJson(response);
+}
+
+export function getApiErrorMessage(error: unknown, fallback = "Something went wrong"): string {
+  if (error instanceof ApiClientError) return error.message;
+  if (error instanceof Error) return error.message;
+  return fallback;
 }

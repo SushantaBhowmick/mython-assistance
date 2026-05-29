@@ -82,7 +82,7 @@ export function MusicLayout({ children }: { children: React.ReactNode }) {
               <Link href="/music" className="text-lg font-semibold tracking-tight">
                 Mython Music
               </Link>
-              <p className="text-sm text-muted-foreground">Personal Music player</p>
+              <p className="text-sm text-muted-foreground">Your music on Mython</p>
             </div>
 
             <nav className="flex flex-col gap-1">
@@ -105,7 +105,7 @@ export function MusicLayout({ children }: { children: React.ReactNode }) {
           <div className="mb-4 flex items-center justify-between md:hidden">
             <div>
               <p className="text-sm font-medium">Mython Music</p>
-              <p className="text-xs text-muted-foreground">Personal Music player</p>
+              <p className="text-xs text-muted-foreground">Your music on Mython</p>
             </div>
             <div className="flex items-center gap-1">
               <Button

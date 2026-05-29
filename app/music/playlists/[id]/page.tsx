@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/music/EmptyState";
 import { LoadingState } from "@/components/music/LoadingState";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
+import { ShufflePlayButton } from "@/components/music/ShufflePlayButton";
 import { getPlaylist } from "@/lib/music/api-client";
 import type { PlaylistDetail } from "@/types/music";
 
@@ -36,11 +37,16 @@ export default function PlaylistDetailPage() {
 
         {!loading && !error && playlist && (
           <>
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">{playlist.name}</h1>
-              <p className="text-muted-foreground">
-                {playlist.description || "No description"}
-              </p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight">{playlist.name}</h1>
+                <p className="text-muted-foreground">
+                  {playlist.description || "No description"}
+                </p>
+              </div>
+              {playlist.tracks.length > 0 && (
+                <ShufflePlayButton tracks={playlist.tracks} />
+              )}
             </div>
 
             {playlist.tracks.length === 0 ? (

@@ -20,13 +20,15 @@ model Profile {
 }
 
 model YouTubeCache {
-  id        String   @id @default(cuid())
-  query     String   @unique
-  results   Json
-  expiresAt DateTime @map("expires_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id             String   @id @default(cuid())
+  query          String   @unique
+  results        Json
+  expiresAt      DateTime @map("expires_at")
+  lastAccessedAt DateTime @default(now()) @map("last_accessed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
+  @@index([lastAccessedAt])
   @@map("youtube_cache")
 }
 
@@ -45,6 +47,7 @@ model SavedTrack {
   favorites        Favorite[]
   playlistTracks   PlaylistTrack[]
   listeningHistory ListeningHistory[]
+  trackStats       TrackStats[]
 
   @@unique([userId, videoId])
   @@index([userId])
@@ -105,6 +108,34 @@ model ListeningHistory {
   @@index([userId])
   @@index([userId, playedAt])
   @@map("listening_history")
+}
+
+model TrackStats {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  trackId        String   @map("track_id")
+  playCount      Int      @default(0) @map("play_count")
+  firstPlayedAt  DateTime @default(now()) @map("first_played_at")
+  lastPlayedAt   DateTime @default(now()) @map("last_played_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  track SavedTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId, lastPlayedAt])
+  @@index([userId, playCount])
+  @@map("track_stats")
+}
+
+model YouTubeQuotaState {
+  id                        String    @id @default("default")
+  lastQuotaErrorAt          DateTime? @map("last_quota_error_at")
+  liveSearchDisabledUntil   DateTime? @map("live_search_disabled_until")
+  estimatedSearchCallsToday Int       @default(0) @map("estimated_search_calls_today")
+  searchCallsDate           DateTime? @map("search_calls_date")
+  updatedAt                 DateTime  @updatedAt @map("updated_at")
+
+  @@map("youtube_quota_state")
 }
 
 model NotificationToken {

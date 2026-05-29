@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/music/EmptyState";
 import { LoadingState } from "@/components/music/LoadingState";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
+import { ShufflePlayButton } from "@/components/music/ShufflePlayButton";
 import { getFavorites } from "@/lib/music/api-client";
 import type { SavedTrack } from "@/types/music";
 
@@ -22,9 +23,12 @@ export default function FavoritesPage() {
 
   return (
     <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Favorites</h1>
-          <p className="text-muted-foreground">Songs you have marked as favorites.</p>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Favorites</h1>
+            <p className="text-muted-foreground">Songs you have marked as favorites.</p>
+          </div>
+          {tracks.length > 0 && <ShufflePlayButton tracks={tracks} />}
         </div>
 
         {loading && <LoadingState label="Loading favorites..." />}

@@ -1,19 +1,24 @@
 import { getUserId } from "@/lib/auth/user";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { createPlaylistSchema } from "@/lib/music/schemas";
-import { prisma } from "@/lib/prisma/client";
+import { prisma, safePrismaRead } from "@/lib/prisma/client";
 
 export async function GET() {
   try {
     const userId = await getUserId();
 
-    const playlists = await prisma.playlist.findMany({
-      where: { userId },
-      include: {
-        _count: { select: { tracks: true } },
-      },
-      orderBy: { updatedAt: "desc" },
-    });
+    const { data: playlists, degraded } = await safePrismaRead(
+      () =>
+        prisma.playlist.findMany({
+          where: { userId },
+          include: {
+            _count: { select: { tracks: true } },
+          },
+          orderBy: { updatedAt: "desc" },
+        }),
+      [],
+      "playlists/list",
+    );
 
     return jsonOk({
       playlists: playlists.map((playlist) => ({
@@ -25,6 +30,7 @@ export async function GET() {
         createdAt: playlist.createdAt.toISOString(),
         updatedAt: playlist.updatedAt.toISOString(),
       })),
+      degraded: degraded || undefined,
     });
   } catch (error) {
     console.error("[playlists/get]", error);

@@ -1,8 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 
+import { TrackThumbnail } from "@/components/music/TrackThumbnail";
 import { PlayerControls } from "@/components/player/PlayerControls";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/player-store";
@@ -26,12 +26,9 @@ export function MiniPlayer() {
       <div className="mx-auto max-w-6xl space-y-2 px-4 py-3">
         <div className="flex items-center gap-3">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-md">
-            <Image
+            <TrackThumbnail
               src={currentTrack.thumbnailUrl}
               alt={currentTrack.title}
-              fill
-              className="object-cover"
-              sizes="48px"
             />
           </div>
 

@@ -2,17 +2,22 @@ import { getUserId } from "@/lib/auth/user";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { toSavedTrack } from "@/lib/music/normalize";
 import { favoriteSchema } from "@/lib/music/schemas";
-import { prisma } from "@/lib/prisma/client";
+import { prisma, safePrismaRead, withPrismaRetry } from "@/lib/prisma/client";
 
 export async function GET() {
   try {
     const userId = await getUserId();
 
-    const favorites = await prisma.favorite.findMany({
-      where: { userId },
-      include: { track: true },
-      orderBy: { createdAt: "desc" },
-    });
+    const { data: favorites, degraded } = await safePrismaRead(
+      () =>
+        prisma.favorite.findMany({
+          where: { userId },
+          include: { track: true },
+          orderBy: { createdAt: "desc" },
+        }),
+      [],
+      "favorites/list",
+    );
 
     return jsonOk({
       favorites: favorites.map((favorite) => ({
@@ -20,6 +25,7 @@ export async function GET() {
         createdAt: favorite.createdAt.toISOString(),
         track: toSavedTrack(favorite.track),
       })),
+      degraded: degraded || undefined,
     });
   } catch (error) {
     console.error("[favorites/get]", error);
@@ -46,20 +52,24 @@ export async function POST(request: Request) {
       return jsonError("Track not found", 404);
     }
 
-    const favorite = await prisma.favorite.upsert({
-      where: {
-        userId_trackId: {
-          userId,
-          trackId: parsed.data.trackId,
-        },
-      },
-      create: {
-        userId,
-        trackId: parsed.data.trackId,
-      },
-      update: {},
-      include: { track: true },
-    });
+    const favorite = await withPrismaRetry(
+      () =>
+        prisma.favorite.upsert({
+          where: {
+            userId_trackId: {
+              userId,
+              trackId: parsed.data.trackId,
+            },
+          },
+          create: {
+            userId,
+            trackId: parsed.data.trackId,
+          },
+          update: {},
+          include: { track: true },
+        }),
+      { label: "favorites/upsert" },
+    );
 
     return jsonOk(
       {

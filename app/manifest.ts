@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Personal Assistant PWA",
-    short_name: "Assistant",
-    description: "Personal music and daily assistant PWA",
+    name: "Mython",
+    short_name: "Mython",
+    description: "Your personal assistant — music, daily tools, and more.",
     start_url: "/music",
     scope: "/",
     display: "standalone",
