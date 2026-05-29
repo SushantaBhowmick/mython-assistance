@@ -1,3 +1,4 @@
+import path from "node:path";
 import withSerwistInit from "@serwist/next";
 import type { NextConfig } from "next";
 
@@ -8,6 +9,7 @@ const withSerwist = withSerwistInit({
 });
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(process.cwd()),
   images: {
     remotePatterns: [
       {
