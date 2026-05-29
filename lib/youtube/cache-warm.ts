@@ -21,7 +21,7 @@ function cacheQueriesForTrack(track: MusicTrack): string[] {
 
 async function mergeTrackIntoCacheQuery(query: string, track: MusicTrack) {
   const existing = await prisma.youTubeCache.findUnique({ where: { query } });
-  const current = existing ? (existing.results as MusicTrack[]) : [];
+  const current = existing ? (existing.results as unknown as MusicTrack[]) : [];
   const merged = [track, ...current.filter((item) => item.videoId !== track.videoId)].slice(
     0,
     20,

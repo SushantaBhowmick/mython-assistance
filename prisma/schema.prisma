@@ -127,17 +127,6 @@ model TrackStats {
   @@map("track_stats")
 }
 
-model YouTubeQuotaState {
-  id                        String    @id @default("default")
-  lastQuotaErrorAt          DateTime? @map("last_quota_error_at")
-  liveSearchDisabledUntil   DateTime? @map("live_search_disabled_until")
-  estimatedSearchCallsToday Int       @default(0) @map("estimated_search_calls_today")
-  searchCallsDate           DateTime? @map("search_calls_date")
-  updatedAt                 DateTime  @updatedAt @map("updated_at")
-
-  @@map("youtube_quota_state")
-}
-
 model NotificationToken {
   id         String    @id @default(cuid())
   userId     String    @map("user_id")

@@ -77,7 +77,7 @@ function toCachedResult(
   fuzzy: boolean,
 ): CachedSearchResult {
   return {
-    tracks: row.results as MusicTrack[],
+    tracks: row.results as unknown as MusicTrack[],
     expiresAt: row.expiresAt,
     matchedQuery: row.query,
     stale: row.expiresAt <= new Date(),
@@ -237,7 +237,7 @@ export async function getCachedDiscoveryTracks(limit = 20): Promise<MusicTrack[]
     const tracks: MusicTrack[] = [];
 
     for (const row of rows) {
-      for (const track of row.results as MusicTrack[]) {
+      for (const track of row.results as unknown as MusicTrack[]) {
         if (seen.has(track.videoId)) continue;
         seen.add(track.videoId);
         tracks.push(track);

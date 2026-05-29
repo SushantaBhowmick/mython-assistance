@@ -116,7 +116,7 @@ export async function searchLocalMusic(
   }
 
   for (const row of cacheResult.data) {
-    for (const track of row.results as MusicTrack[]) {
+    for (const track of row.results as unknown as MusicTrack[]) {
       add(track, row.query.includes(query) ? 12 : 5);
     }
   }

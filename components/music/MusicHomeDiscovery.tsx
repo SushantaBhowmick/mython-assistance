@@ -59,7 +59,7 @@ export function MusicHomeDiscovery() {
         return fallback;
       }
 
-      const value = result.value as T & { degraded?: boolean };
+      const value = result.value as unknown as T & { degraded?: boolean };
       if (value && typeof value === "object" && "degraded" in value && value.degraded) {
         sawDegraded = true;
       }
