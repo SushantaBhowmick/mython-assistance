@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>Offline — Mython</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font-family: system-ui, sans-serif;
+        background: #0a0a0a;
+        color: #fafafa;
+        padding: 24px;
+      }
+      .card {
+        max-width: 420px;
+        text-align: center;
+      }
+      button,
+      a {
+        display: inline-block;
+        margin: 8px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        border: 0;
+        background: #fafafa;
+        color: #0a0a0a;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      a.secondary {
+        background: #262626;
+        color: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>You are offline</h1>
+      <p>Reconnect to search music or sync your library. Cached pages may still open.</p>
+      <button type="button" onclick="location.reload()">Retry</button>
+      <a class="secondary" href="/music">Open Music</a>
+    </div>
+  </body>
+</html>

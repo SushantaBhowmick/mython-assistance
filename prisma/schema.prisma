@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("profiles")
+}
+
+model YouTubeCache {
+  id        String   @id @default(cuid())
+  query     String   @unique
+  results   Json
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("youtube_cache")
+}
+
+model SavedTrack {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  videoId      String   @map("video_id")
+  title        String
+  channelTitle String   @map("channel_title")
+  thumbnailUrl String   @map("thumbnail_url")
+  duration     String?
+  source       String   @default("youtube")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  favorites        Favorite[]
+  playlistTracks   PlaylistTrack[]
+  listeningHistory ListeningHistory[]
+
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@map("saved_tracks")
+}
+
+model Playlist {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  name        String
+  description String?
+  coverImage  String?  @map("cover_image")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  tracks PlaylistTrack[]
+
+  @@index([userId])
+  @@map("playlists")
+}
+
+model PlaylistTrack {
+  id         String   @id @default(cuid())
+  playlistId String   @map("playlist_id")
+  trackId    String   @map("track_id")
+  position   Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  playlist Playlist   @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  track    SavedTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId])
+  @@map("playlist_tracks")
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  trackId   String   @map("track_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  track SavedTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackId])
+  @@index([userId])
+  @@map("favorites")
+}
+
+model ListeningHistory {
+  id       String   @id @default(cuid())
+  userId   String   @map("user_id")
+  trackId  String   @map("track_id")
+  playedAt DateTime @default(now()) @map("played_at")
+
+  track SavedTrack @relation(fields: [trackId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, playedAt])
+  @@map("listening_history")
+}
+
+model NotificationToken {
+  id         String    @id @default(cuid())
+  userId     String    @map("user_id")
+  token      String    @unique
+  platform   String?
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  lastUsedAt DateTime? @map("last_used_at")
+
+  @@index([userId])
+  @@map("notification_tokens")
+}
