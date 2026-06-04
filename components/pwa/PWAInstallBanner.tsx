@@ -60,7 +60,7 @@ export function PWAInstallBanner() {
       <div className="mx-auto flex max-w-6xl items-center gap-3">
         <Download className="size-5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium">Install Mython</p>
+          <p className="text-sm font-medium">Install app</p>
           <p className="text-xs text-muted-foreground">
             Add to your home screen for a native-like music experience.
           </p>

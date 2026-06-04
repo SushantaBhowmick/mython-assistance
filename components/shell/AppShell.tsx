@@ -14,7 +14,10 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { BrandMark } from "@/components/shell/BrandMark";
 import { CommandPaletteTrigger } from "@/components/shell/CommandPaletteTrigger";
+import { PlatformBackdrop } from "@/components/shell/PlatformBackdrop";
+import { ReminderDispatchPoller } from "@/components/notifications/ReminderDispatchPoller";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -67,18 +70,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="relative min-h-screen">
+      <PlatformBackdrop />
+      <ReminderDispatchPoller />
+
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row md:px-6 safe-top">
         <aside className="hidden md:block md:w-56 md:shrink-0">
-          <div className="sticky top-6 space-y-6">
-            <div>
-              <Link href="/dashboard" className="text-lg font-semibold tracking-tight">
-                Mython
-              </Link>
-              <p className="text-sm text-muted-foreground">Personal OS</p>
+          <div className="sticky top-6 space-y-5 rounded-2xl border bg-card/40 p-4 shadow-sm backdrop-blur-md">
+            <div className="flex flex-col items-center gap-2 pb-1 text-center">
+              <BrandMark size="md" />
+              <p className="text-xs text-muted-foreground">Personal OS</p>
             </div>
 
-            <nav className="flex flex-col gap-1">
+            <nav className="flex flex-col gap-0.5">
               {desktopNavItems.map((item) => (
                 <Link
                   key={item.href}
@@ -86,8 +90,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className={cn(
                     "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
                     matchActive(pathname, item.href)
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-accent/80 hover:text-accent-foreground",
                   )}
                 >
                   <item.icon className="size-4 shrink-0" />
@@ -96,7 +100,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ))}
               <Button
                 variant="ghost"
-                className="justify-start gap-2 px-3 text-muted-foreground"
+                className="mt-1 justify-start gap-2 px-3 text-muted-foreground"
                 onClick={handleLogout}
               >
                 <LogOut className="size-4" />
@@ -111,9 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <main className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           <div className="mb-4 flex items-center justify-between md:hidden">
-            <Link href="/dashboard" className="text-sm font-semibold">
-              Mython
-            </Link>
+            <BrandMark size="sm" />
             <div className="flex items-center gap-1">
               <CommandPaletteTrigger compact />
               <Button asChild variant="ghost" size="icon-sm">
@@ -131,14 +133,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 px-1 py-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 px-1 py-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-around gap-0.5">
           {mobileNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px]",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] transition-colors",
                 matchActive(pathname, item.href)
                   ? "text-primary"
                   : "text-muted-foreground",

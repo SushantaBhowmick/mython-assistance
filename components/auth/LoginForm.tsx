@@ -1,6 +1,8 @@
 "use client";
 
-import { Loader2, Lock, Mail, Sparkles } from "lucide-react";
+import { Loader2, Lock, Mail } from "lucide-react";
+
+import { BrandMark } from "@/components/shell/BrandMark";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -57,12 +59,9 @@ export function LoginForm() {
       />
 
       <div className="relative w-full max-w-md">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl border bg-card/60 shadow-lg backdrop-blur">
-            <Sparkles className="size-7 text-primary" />
-          </div>
-          <h1 className="text-3xl font-semibold tracking-tight">Mython</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
+        <div className="mb-8 flex flex-col items-center text-center">
+          <BrandMark size="lg" link={false} className="mb-4" />
+          <p className="text-sm text-muted-foreground">
             Personal OS — sign in to your private workspace
           </p>
         </div>

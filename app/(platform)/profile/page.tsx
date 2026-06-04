@@ -28,9 +28,11 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="rounded-2xl border bg-card/60 p-6 shadow-sm backdrop-blur-sm">
         <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-muted-foreground">Your personal information and account security.</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your personal information and account security.
+        </p>
       </div>
 
       {loading && (

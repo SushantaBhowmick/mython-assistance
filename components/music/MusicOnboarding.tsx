@@ -12,7 +12,7 @@ export function MusicOnboarding() {
     <Card className="border-dashed">
       <CardContent className="space-y-5 p-6">
         <div>
-          <h2 className="text-lg font-semibold">Welcome to Mython Music</h2>
+          <h2 className="text-lg font-semibold">Welcome to Music</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Start with a search, save favorites, and build playlists. Everything
             here is powered by your library — no automatic YouTube calls.

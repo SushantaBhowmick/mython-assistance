@@ -57,7 +57,7 @@ export async function sendPushNotification(input: {
     data: input.data,
     webpush: {
       fcmOptions: {
-        link: "/music",
+        link: input.data?.href ?? "/reminders",
       },
     },
   });

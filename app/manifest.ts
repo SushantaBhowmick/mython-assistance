@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Mython",
     short_name: "Mython",
     description: "Your personal assistant — music, daily tools, and more.",
-    start_url: "/music",
+    start_url: "/dashboard",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

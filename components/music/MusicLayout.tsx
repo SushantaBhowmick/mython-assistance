@@ -12,6 +12,8 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { BrandMark } from "@/components/shell/BrandMark";
+import { PlatformBackdrop } from "@/components/shell/PlatformBackdrop";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -81,14 +83,13 @@ export function MusicLayout({ children }: { children: React.ReactNode }) {
           : "pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-36",
       )}
     >
+      <PlatformBackdrop />
       <div className="mx-auto flex max-w-6xl flex-col gap-6 px-4 py-6 md:flex-row md:px-6 safe-top">
         <aside className="hidden md:block md:w-56 md:shrink-0">
-          <div className="sticky top-6 space-y-6">
-            <div>
-              <Link href="/music" className="text-lg font-semibold tracking-tight">
-                Mython Player
-              </Link>
-              <p className="text-sm text-muted-foreground">Your music on Mython</p>
+          <div className="sticky top-6 space-y-5 rounded-2xl border bg-card/40 p-4 shadow-sm backdrop-blur-md">
+            <div className="flex flex-col items-center gap-2 text-center">
+              <BrandMark size="md" href="/music" />
+              <p className="text-xs text-muted-foreground">Music</p>
             </div>
 
             <nav className="flex flex-col gap-1">
@@ -109,10 +110,7 @@ export function MusicLayout({ children }: { children: React.ReactNode }) {
 
         <main className="min-w-0 flex-1">
           <div className="mb-4 flex items-center justify-between md:hidden">
-            <div>
-              <p className="text-sm font-medium">Mython Player</p>
-              <p className="text-xs text-muted-foreground">Your music on Mython</p>
-            </div>
+            <BrandMark size="sm" href="/music" />
             <div className="flex items-center gap-1">
               <Button
                 asChild

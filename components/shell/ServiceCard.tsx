@@ -26,9 +26,9 @@ export function ServiceCard({ serviceId }: ServiceCardProps) {
   const content = (
     <div
       className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card/50 p-5 transition-all",
+        "group relative flex h-full flex-col overflow-hidden rounded-2xl border bg-card/60 p-5 shadow-sm backdrop-blur-sm transition-all",
         isActive
-          ? "hover:border-primary/40 hover:bg-card/80 hover:shadow-lg"
+          ? "hover:border-primary/40 hover:bg-card/90 hover:shadow-lg"
           : "cursor-default opacity-80",
       )}
     >

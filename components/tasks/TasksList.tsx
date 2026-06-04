@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
@@ -20,12 +21,18 @@ const filters: { id: TaskFilter; label: string }[] = [
   { id: "done", label: "Done" },
 ];
 
+const validFilters: TaskFilter[] = ["all", "today", "upcoming", "done", "overdue"];
+
 export function TasksList() {
+  const searchParams = useSearchParams();
+  const initialFilter = searchParams.get("filter");
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState(false);
-  const [filter, setFilter] = useState<TaskFilter>("all");
+  const [filter, setFilter] = useState<TaskFilter>(
+    validFilters.includes(initialFilter as TaskFilter) ? (initialFilter as TaskFilter) : "all",
+  );
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [quickTitle, setQuickTitle] = useState("");

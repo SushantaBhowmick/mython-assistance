@@ -110,6 +110,7 @@ model Reminder {
   remindAt     DateTime       @map("remind_at")
   status       ReminderStatus @default(PENDING)
   snoozedUntil DateTime?      @map("snoozed_until")
+  notifiedAt   DateTime?      @map("notified_at")
   taskId       String?        @map("task_id")
   noteId       String?        @map("note_id")
   createdAt    DateTime       @default(now()) @map("created_at")

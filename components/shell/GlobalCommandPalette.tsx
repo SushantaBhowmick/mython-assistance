@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Reminders", icon: Bell },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/music/search", label: "Search music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
@@ -59,6 +60,10 @@ export function GlobalCommandPalette({ open, onOpenChange }: GlobalCommandPalett
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [running, setRunning] = useState(false);
+  const [searchHits, setSearchHits] = useState<
+    Array<{ type: string; id: string; title: string; href: string; meta?: string }>
+  >([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   const parsed = parseCommand(query);
   const parsedLabel = describeCommand(parsed);
@@ -79,8 +84,34 @@ export function GlobalCommandPalette({ open, onOpenChange }: GlobalCommandPalett
   useEffect(() => {
     if (!open) {
       setQuery("");
+      setSearchHits([]);
     }
   }, [open]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2 || showParsedAction) {
+      setSearchHits([]);
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      setSearchLoading(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(term)}&limit=6`);
+        if (res.ok) {
+          const data = await res.json();
+          setSearchHits(data.results ?? []);
+        }
+      } catch {
+        setSearchHits([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    }, 280);
+
+    return () => window.clearTimeout(timer);
+  }, [query, showParsedAction]);
 
   async function runCommand(command = parsed) {
     if (running) return;
@@ -119,7 +150,7 @@ export function GlobalCommandPalette({ open, onOpenChange }: GlobalCommandPalett
       onOpenChange={onOpenChange}
       value={query}
       onValueChange={setQuery}
-      title="Mython Command"
+      title="Command"
       description="Navigate, create tasks, notes, reminders, or search music"
       className="sm:max-w-lg"
     >
@@ -134,6 +165,25 @@ export function GlobalCommandPalette({ open, onOpenChange }: GlobalCommandPalett
       />
       <CommandList>
         <CommandEmpty>No results. Press Enter to run if a command is detected.</CommandEmpty>
+
+        {searchHits.length > 0 && (
+          <CommandGroup heading={searchLoading ? "Searching…" : "Search"}>
+            {searchHits.map((hit) => (
+              <CommandItem
+                key={`${hit.type}-${hit.id}`}
+                value={`search ${hit.title} ${hit.type}`}
+                onSelect={() => {
+                  onOpenChange(false);
+                  router.push(hit.href);
+                }}
+                className="cursor-pointer"
+              >
+                <span className="truncate">{hit.title}</span>
+                <CommandShortcut className="capitalize">{hit.type}</CommandShortcut>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
 
         {showParsedAction && (
           <CommandGroup heading="Run command">

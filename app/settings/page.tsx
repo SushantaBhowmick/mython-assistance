@@ -1,17 +1,31 @@
 import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
+import { Bell, ChevronRight } from "lucide-react";
 
 export default function SettingsPage() {
   return (
     <div className="space-y-6">
-      <div>
+      <div className="rounded-2xl border bg-card/60 p-6 shadow-sm backdrop-blur-sm">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-muted-foreground">Mython preferences</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Notifications, install, and device preferences.
+        </p>
       </div>
-      <Button asChild variant="secondary">
-        <Link href="/settings/notifications">Notifications & install</Link>
-      </Button>
+
+      <Link
+        href="/settings/notifications"
+        className="flex items-center justify-between rounded-2xl border bg-card/50 px-5 py-4 transition-colors hover:bg-card/80"
+      >
+        <span className="flex items-center gap-3">
+          <span className="flex size-10 items-center justify-center rounded-xl border bg-background/80">
+            <Bell className="size-5 text-primary" />
+          </span>
+          <span>
+            <span className="font-medium">Notifications & install</span>
+            <p className="text-sm text-muted-foreground">Push alerts and PWA install</p>
+          </span>
+        </span>
+        <ChevronRight className="size-5 text-muted-foreground" />
+      </Link>
     </div>
   );
 }

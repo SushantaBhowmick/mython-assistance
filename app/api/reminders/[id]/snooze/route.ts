@@ -37,6 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
         data: {
           status: "SNOOZED",
           snoozedUntil,
+          notifiedAt: null,
         },
         include: reminderInclude,
       }),
