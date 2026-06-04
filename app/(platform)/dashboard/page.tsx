@@ -31,7 +31,7 @@ export default function DashboardPage() {
         <ul className="mt-3 list-inside list-disc space-y-1">
           <li>Dashboard is only a launcher — not a combined homepage.</li>
           <li>Music keeps playing globally while you use other services.</li>
-          <li>Tasks, Notes, and Reminders ship next — one service at a time.</li>
+          <li>Tasks, Notes, Reminders, and Bookmarks are live — more modules ship one at a time.</li>
         </ul>
       </section>
     </div>

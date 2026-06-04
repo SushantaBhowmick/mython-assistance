@@ -39,15 +39,30 @@ function CommandDialog({
   children,
   className,
   showCloseButton = false,
+  commandClassName,
   ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
-}) {
+}: React.ComponentProps<typeof Dialog> &
+  React.ComponentProps<typeof CommandPrimitive> & {
+    title?: string
+    description?: string
+    className?: string
+    showCloseButton?: boolean
+    commandClassName?: string
+  }) {
+  const {
+    value,
+    onValueChange,
+    defaultValue,
+    shouldFilter,
+    filter,
+    loop,
+    vimBindings,
+    label,
+    ...dialogProps
+  } = props
+
   return (
-    <Dialog {...props}>
+    <Dialog {...dialogProps}>
       <DialogHeader className="sr-only">
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
@@ -59,7 +74,22 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        <Command
+          value={value}
+          onValueChange={onValueChange}
+          defaultValue={defaultValue}
+          shouldFilter={shouldFilter}
+          filter={filter}
+          loop={loop}
+          vimBindings={vimBindings}
+          label={label}
+          className={cn(
+            "rounded-none border-0 bg-transparent shadow-none",
+            commandClassName
+          )}
+        >
+          {children}
+        </Command>
       </DialogContent>
     </Dialog>
   )

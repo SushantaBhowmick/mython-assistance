@@ -1,5 +1,7 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
@@ -28,7 +30,8 @@ function getStatusLabel(source: SearchSource | undefined, quotaExceeded?: boolea
   return null;
 }
 
-export default function MusicSearchPage() {
+function MusicSearchPageContent() {
+  const searchParams = useSearchParams();
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [tracks, setTracks] = useState<MusicTrack[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
@@ -123,6 +126,13 @@ export default function MusicSearchPage() {
     return () => abortRef.current?.abort();
   }, []);
 
+  useEffect(() => {
+    const q = searchParams.get("q")?.trim();
+    if (q && q.length >= MIN_SEARCH_QUERY_LENGTH) {
+      runSearch(q);
+    }
+  }, [searchParams, runSearch]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -193,5 +203,13 @@ export default function MusicSearchPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function MusicSearchPage() {
+  return (
+    <Suspense fallback={<MusicSearchResultsSkeleton />}>
+      <MusicSearchPageContent />
+    </Suspense>
   );
 }

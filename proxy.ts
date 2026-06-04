@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "./lib/supabase/proxy-session";
 
 const PUBLIC_PATHS = ["/login", "/offline", "/manifest.webmanifest"];
 
@@ -22,7 +22,7 @@ function isPublicPath(pathname: string) {
   return false;
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const { supabaseResponse, user } = await updateSession(request);
@@ -33,9 +33,9 @@ export async function middleware(request: NextRequest) {
 
   function redirectWithSession(url: URL) {
     const redirect = NextResponse.redirect(url);
-    supabaseResponse.cookies.getAll().forEach((cookie) => {
-      redirect.cookies.set(cookie.name, cookie.value, cookie);
-    });
+    for (const cookie of supabaseResponse.cookies.getAll()) {
+      redirect.cookies.set(cookie.name, cookie.value);
+    }
     return redirect;
   }
 

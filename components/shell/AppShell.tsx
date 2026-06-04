@@ -2,6 +2,7 @@
 
 import {
   Bell,
+  Bookmark,
   LayoutDashboard,
   ListTodo,
   LogOut,
@@ -13,6 +14,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
+import { CommandPaletteTrigger } from "@/components/shell/CommandPaletteTrigger";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
@@ -23,6 +25,7 @@ const desktopNavItems = [
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Reminders", icon: Bell },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -33,6 +36,7 @@ const mobileNavItems = [
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Alerts", icon: Bell },
+  { href: "/bookmarks", label: "Saved", icon: Bookmark },
   { href: "/music", label: "Music", icon: Music2 },
 ];
 
@@ -42,6 +46,9 @@ function matchActive(pathname: string, href: string) {
   if (href === "/notes") return pathname === "/notes" || pathname.startsWith("/notes/");
   if (href === "/reminders") {
     return pathname === "/reminders" || pathname.startsWith("/reminders/");
+  }
+  if (href === "/bookmarks") {
+    return pathname === "/bookmarks" || pathname.startsWith("/bookmarks/");
   }
   if (href === "/music") return pathname === "/music" || pathname.startsWith("/music/");
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -97,6 +104,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </Button>
             </nav>
 
+            <CommandPaletteTrigger className="w-full justify-between" />
             <ThemeToggle />
           </div>
         </aside>
@@ -107,6 +115,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               Mython
             </Link>
             <div className="flex items-center gap-1">
+              <CommandPaletteTrigger compact />
               <Button asChild variant="ghost" size="icon-sm">
                 <Link href="/profile" aria-label="Profile">
                   <User className="size-4" />

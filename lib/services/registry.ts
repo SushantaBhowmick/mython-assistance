@@ -1,5 +1,6 @@
 import {
   Bell,
+  Bookmark,
   BookOpen,
   Brain,
   LayoutDashboard,
@@ -16,6 +17,7 @@ export type ServiceId =
   | "notes"
   | "tasks"
   | "reminders"
+  | "bookmarks"
   | "learning"
   | "career"
   | "finance"
@@ -80,6 +82,15 @@ export const PERSONAL_SERVICES: PersonalService[] = [
     icon: Bell,
     status: "active",
     accent: "from-rose-500/20 to-pink-500/10",
+  },
+  {
+    id: "bookmarks",
+    name: "Bookmarks",
+    description: "Saved links and references for later",
+    href: "/bookmarks",
+    icon: Bookmark,
+    status: "active",
+    accent: "from-teal-500/20 to-cyan-500/10",
   },
   {
     id: "learning",

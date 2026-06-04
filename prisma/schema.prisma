@@ -61,10 +61,27 @@ model Note {
   createdAt DateTime   @default(now()) @map("created_at")
   updatedAt DateTime   @updatedAt @map("updated_at")
   reminders Reminder[]
+  bookmarks Bookmark[]
 
   @@index([userId, updatedAt])
   @@index([userId, pinned])
   @@map("notes")
+}
+
+model Bookmark {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  title       String
+  url         String
+  description String?  @db.Text
+  noteId      String?  @map("note_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  note Note? @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([userId, updatedAt])
+  @@map("bookmarks")
 }
 
 model Task {
