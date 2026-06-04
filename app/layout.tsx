@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
+import { SupabaseAuthProvider } from "@/components/auth/SupabaseAuthProvider";
 import { GlobalPlayerProvider } from "@/components/player/GlobalPlayerProvider";
 import { PWAProvider } from "@/components/pwa/PWAProvider";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -65,7 +66,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col safe-top safe-bottom">
         <ThemeProvider>
           <PWAProvider>
-            <GlobalPlayerProvider>{children}</GlobalPlayerProvider>
+            <SupabaseAuthProvider>
+              <GlobalPlayerProvider>{children}</GlobalPlayerProvider>
+            </SupabaseAuthProvider>
           </PWAProvider>
           <Toaster richColors closeButton />
         </ThemeProvider>

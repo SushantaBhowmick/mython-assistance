@@ -4,6 +4,7 @@ import {
   Clock3,
   Heart,
   Home,
+  LayoutDashboard,
   ListMusic,
   Search,
   Settings,
@@ -17,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/player-store";
 
 const navItems = [
+  { href: "/dashboard", label: "OS", icon: LayoutDashboard },
   { href: "/music", label: "Home", icon: Home },
   { href: "/music/search", label: "Search", icon: Search },
   { href: "/music/favorites", label: "Favorites", icon: Heart },
@@ -63,7 +65,11 @@ export function MusicLayout({ children }: { children: React.ReactNode }) {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
 
   function isActive(href: string) {
-    return pathname === href || (href !== "/music" && pathname.startsWith(href));
+    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/music") {
+      return pathname === "/music" || pathname.startsWith("/music/");
+    }
+    return pathname === href || pathname.startsWith(`${href}/`);
   }
 
   return (

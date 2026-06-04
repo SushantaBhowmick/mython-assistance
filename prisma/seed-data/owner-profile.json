@@ -1,0 +1,117 @@
+{
+  "email": "bhosushanta922@gmail.com",
+  "name": "Sushanta Bhowmick",
+  "age": 24,
+  "dateOfBirth": "2002-05-15",
+  "phone": "+91-8336935924",
+  "location": "Kolkata, West Bengal, India",
+  "githubUrl": "https://github.com/SushantaBhowmick",
+  "linkedinUrl": "https://www.linkedin.com/in/sushanta-bhowmick",
+  "about": "Full Stack Developer with 2+ years of experience in MERN and Angular stack, specializing in scalable web applications, RESTful APIs, and real-time systems. Building Mython — a personal operating system for productivity, music, and life management.",
+  "skills": [
+    "C",
+    "C++",
+    "JavaScript (ES6+)",
+    "TypeScript",
+    "React.js",
+    "Next.js",
+    "Angular",
+    "Tailwind CSS",
+    "ShadCN UI",
+    "Redux",
+    "Zustand",
+    "Node.js",
+    "Express.js",
+    "RESTful APIs",
+    "MongoDB",
+    "PostgreSQL",
+    "Supabase",
+    "Prisma",
+    "Docker",
+    "Git",
+    "Vercel",
+    "Firebase"
+  ],
+  "career": {
+    "current": {
+      "company": "Pactap Brand ABS Pvt Ltd",
+      "role": "Full Stack Developer",
+      "joinedAt": "2025-05-04",
+      "location": "India"
+    },
+    "summary": "Full Stack Developer focused on scalable web apps, APIs, and PWA experiences."
+  },
+  "experience": [
+    {
+      "company": "Pactap Brand ABS Pvt Ltd",
+      "role": "Full Stack Developer",
+      "period": "May 2025 – Present",
+      "highlights": ["Current role — building production web applications."]
+    },
+    {
+      "company": "Cetpa InfoTech Pvt. Ltd.",
+      "role": "Full Stack Developer",
+      "period": "Jul 2025 – Present",
+      "highlights": [
+        "Attendance Management System with biometric face recognition and live dashboard.",
+        "E-Mudhra Digital Signature — DSC APIs for Aadhaar-based document signing.",
+        "Contract Management — reduced manual processing time by 40%.",
+        "Appraisal Management System with HR review and PDF export.",
+        "Leave Management System with multi-level approval workflows.",
+        "NDA/NHA overtime duty management modules."
+      ]
+    },
+    {
+      "company": "Xotiv Technologies Pvt. Ltd.",
+      "role": "Full Stack Developer (Intern → Full-Time)",
+      "period": "Jul 2024 – Jul 2025",
+      "highlights": [
+        "Golf Course Management System (app.turfassistant.com).",
+        "TypeScript, Angular, Node.js, Express.js, AWS, Swagger, Sequelize.",
+        "Contributed to Katalyst donation platform for NGOs."
+      ]
+    },
+    {
+      "company": "Dhibar Infotech",
+      "role": "Full Stack Developer Intern",
+      "period": "2023 – 2024",
+      "highlights": [
+        "Learning Management System (MERN) with live classes, notes, and course purchase."
+      ]
+    }
+  ],
+  "education": [
+    {
+      "institution": "Guru Nanak Institute of Technology",
+      "degree": "Bachelor of Technology (Computer Science & Technology)",
+      "period": "2022 – 2025"
+    },
+    {
+      "institution": "Elitte Institute of Engineering & Management",
+      "degree": "Diploma (Computer Science & Technology)",
+      "period": "2020 – 2022"
+    }
+  ],
+  "projects": [
+    {
+      "name": "Mython",
+      "description": "Personal OS PWA — music, dashboard, tasks, notes (in progress).",
+      "stack": ["Next.js", "Supabase", "Prisma", "PWA"]
+    },
+    {
+      "name": "Course Bundler",
+      "description": "Full-stack course platform with admin panel, playlists, Stripe payments.",
+      "stack": ["React", "Next.js", "Node.js", "MongoDB/PostgreSQL", "Stripe"]
+    },
+    {
+      "name": "Real-Time Workspace",
+      "description": "Collaborative SaaS workspace with real-time updates.",
+      "stack": ["Next.js", "WebSockets", "Supabase/PostgreSQL"]
+    },
+    {
+      "name": "Multivendor E-commerce",
+      "description": "MERN marketplace with seller dashboards and order workflows.",
+      "stack": ["React", "Node.js", "MongoDB", "Redux"]
+    }
+  ]
+}

@@ -327,7 +327,7 @@ export const usePlayerStore = create<PlayerStore>()(
 
       clearPlayer: () => {
         if (playerController.isReady()) {
-          playerController.pause();
+          playerController.stop();
         }
         set({
           ...initialState,

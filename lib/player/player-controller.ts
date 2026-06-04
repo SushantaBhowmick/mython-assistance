@@ -23,6 +23,10 @@ export const playerController = {
     playerInstance?.pauseVideo();
   },
 
+  stop() {
+    playerInstance?.stopVideo();
+  },
+
   loadVideo(videoId: string, startSeconds = 0) {
     playerInstance?.loadVideoById({ videoId, startSeconds });
   },

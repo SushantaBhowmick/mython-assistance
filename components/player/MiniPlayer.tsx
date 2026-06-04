@@ -1,14 +1,17 @@
 "use client";
 
+import { X } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 import { TrackThumbnail } from "@/components/music/TrackThumbnail";
 import { PlayerControls } from "@/components/player/PlayerControls";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/player-store";
 
 export function MiniPlayer() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
+  const clearPlayer = usePlayerStore((s) => s.clearPlayer);
   const pathname = usePathname();
   const isMusicRoute = pathname.startsWith("/music");
 
@@ -38,6 +41,17 @@ export function MiniPlayer() {
               {currentTrack.channelTitle}
             </p>
           </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-muted-foreground hover:text-foreground"
+            onClick={() => clearPlayer()}
+            aria-label="Close player"
+          >
+            <X className="size-4" />
+          </Button>
         </div>
 
         <PlayerControls variant="mini" />

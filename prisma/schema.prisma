@@ -9,14 +9,101 @@ datasource db {
 }
 
 model Profile {
-  id        String   @id @default(cuid())
-  userId    String   @unique @map("user_id")
-  name      String?
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id           String    @id @default(cuid())
+  userId       String    @unique @map("user_id")
+  email        String?
+  name         String?
+  age          Int?
+  dateOfBirth  DateTime? @map("date_of_birth")
+  phone        String?
+  location     String?
+  avatarUrl    String?   @map("avatar_url")
+  about        String?   @db.Text
+  githubUrl    String?   @map("github_url")
+  linkedinUrl  String?   @map("linkedin_url")
+  skills       String[]  @default([])
+  career       Json?
+  experience   Json?
+  education    Json?
+  projects     Json?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("profiles")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ReminderStatus {
+  PENDING
+  DONE
+  SNOOZED
+}
+
+model Note {
+  id        String     @id @default(cuid())
+  userId    String     @map("user_id")
+  title     String
+  body      String     @default("") @db.Text
+  tags      String[]   @default([])
+  pinned    Boolean    @default(false)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  reminders Reminder[]
+
+  @@index([userId, updatedAt])
+  @@index([userId, pinned])
+  @@map("notes")
+}
+
+model Task {
+  id           String       @id @default(cuid())
+  userId       String       @map("user_id")
+  title        String
+  description  String?      @db.Text
+  status       TaskStatus   @default(TODO)
+  priority     TaskPriority @default(MEDIUM)
+  dueAt        DateTime?    @map("due_at")
+  completedAt  DateTime?    @map("completed_at")
+  projectTag   String?      @map("project_tag")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  reminders    Reminder[]
+
+  @@index([userId, status])
+  @@index([userId, dueAt])
+  @@map("tasks")
+}
+
+model Reminder {
+  id           String         @id @default(cuid())
+  userId       String         @map("user_id")
+  title        String
+  remindAt     DateTime       @map("remind_at")
+  status       ReminderStatus @default(PENDING)
+  snoozedUntil DateTime?      @map("snoozed_until")
+  taskId       String?        @map("task_id")
+  noteId       String?        @map("note_id")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+
+  task Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  note Note? @relation(fields: [noteId], references: [id], onDelete: SetNull)
+
+  @@index([userId, remindAt])
+  @@index([userId, status])
+  @@map("reminders")
 }
 
 model YouTubeCache {
