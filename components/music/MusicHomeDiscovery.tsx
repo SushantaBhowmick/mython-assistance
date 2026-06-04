@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicHomeDiscoverySkeletons } from "@/components/music/MusicSectionSkeletons";
 import { MusicOnboarding } from "@/components/music/MusicOnboarding";
 import { MusicSection } from "@/components/music/MusicSection";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
@@ -120,7 +120,7 @@ export function MusicHomeDiscovery() {
         </Button>
       </div>
 
-      {loading && <LoadingState label="Loading your library..." />}
+      {loading && <MusicHomeDiscoverySkeletons />}
 
       {degraded && !loading && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">

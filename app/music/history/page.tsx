@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicTrackListSkeleton } from "@/components/music/MusicSectionSkeletons";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
 import { ShufflePlayButton } from "@/components/music/ShufflePlayButton";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {loading && <LoadingState label="Loading history..." />}
+      {loading && <MusicTrackListSkeleton count={6} withMeta />}
 
       {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">

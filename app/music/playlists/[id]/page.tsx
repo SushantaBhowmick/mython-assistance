@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicPlaylistDetailSkeleton } from "@/components/music/MusicSectionSkeletons";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
 import { ShufflePlayButton } from "@/components/music/ShufflePlayButton";
 import { getPlaylist } from "@/lib/music/api-client";
@@ -27,7 +27,7 @@ export default function PlaylistDetailPage() {
 
   return (
     <div className="space-y-6">
-        {loading && <LoadingState label="Loading playlist..." />}
+        {loading && <MusicPlaylistDetailSkeleton />}
 
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">

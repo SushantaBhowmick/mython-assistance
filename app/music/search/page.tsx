@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicSearchResultsSkeleton } from "@/components/music/MusicSectionSkeletons";
 import { MusicSearchInput } from "@/components/music/MusicSearchInput";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
 import {
@@ -149,7 +149,7 @@ export default function MusicSearchPage() {
         Search requires at least 3 characters. Press Enter or click Search.
       </p>
 
-      {loading && <LoadingState label="Searching..." />}
+      {loading && <MusicSearchResultsSkeleton />}
 
       {info && !loading && (
         <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">

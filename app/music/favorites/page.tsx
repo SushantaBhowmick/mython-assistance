@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicTrackListSkeleton } from "@/components/music/MusicSectionSkeletons";
 import { MusicTrackCard } from "@/components/music/MusicTrackCard";
 import { ShufflePlayButton } from "@/components/music/ShufflePlayButton";
 import { getFavorites } from "@/lib/music/api-client";
@@ -31,7 +31,7 @@ export default function FavoritesPage() {
           {tracks.length > 0 && <ShufflePlayButton tracks={tracks} />}
         </div>
 
-        {loading && <LoadingState label="Loading favorites..." />}
+        {loading && <MusicTrackListSkeleton count={6} />}
 
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">

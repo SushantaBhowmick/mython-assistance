@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import { CreatePlaylistDialog } from "@/components/music/CreatePlaylistDialog";
 import { EmptyState } from "@/components/music/EmptyState";
-import { LoadingState } from "@/components/music/LoadingState";
+import { MusicPlaylistCardsSkeleton } from "@/components/music/MusicSectionSkeletons";
 import { PlaylistCard } from "@/components/music/PlaylistCard";
 import { Button } from "@/components/ui/button";
 import { getPlaylists } from "@/lib/music/api-client";
@@ -45,7 +45,7 @@ export default function PlaylistsPage() {
           />
         </div>
 
-        {loading && <LoadingState label="Loading playlists..." />}
+        {loading && <MusicPlaylistCardsSkeleton />}
 
         {error && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
