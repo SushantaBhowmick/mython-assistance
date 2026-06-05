@@ -3,6 +3,8 @@
 import {
   Bell,
   Bookmark,
+  BookOpen,
+  Brain,
   LayoutDashboard,
   ListTodo,
   LogOut,
@@ -10,6 +12,7 @@ import {
   Settings,
   StickyNote,
   User,
+  Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -29,6 +32,9 @@ const desktopNavItems = [
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Reminders", icon: Bell },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { href: "/learning", label: "Learning", icon: BookOpen },
+  { href: "/career", label: "Career", icon: Brain },
+  { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -40,6 +46,9 @@ const mobileNavItems = [
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Alerts", icon: Bell },
   { href: "/bookmarks", label: "Saved", icon: Bookmark },
+  { href: "/learning", label: "Learn", icon: BookOpen },
+  { href: "/career", label: "Jobs", icon: Brain },
+  { href: "/finance", label: "Money", icon: Wallet },
   { href: "/music", label: "Music", icon: Music2 },
 ];
 
@@ -53,6 +62,9 @@ function matchActive(pathname: string, href: string) {
   if (href === "/bookmarks") {
     return pathname === "/bookmarks" || pathname.startsWith("/bookmarks/");
   }
+  if (href === "/learning") return pathname === "/learning" || pathname.startsWith("/learning/");
+  if (href === "/career") return pathname === "/career" || pathname.startsWith("/career/");
+  if (href === "/finance") return pathname === "/finance" || pathname.startsWith("/finance/");
   if (href === "/music") return pathname === "/music" || pathname.startsWith("/music/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }

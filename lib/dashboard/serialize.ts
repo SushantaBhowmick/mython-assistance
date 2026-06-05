@@ -2,9 +2,11 @@ import { endOfDay, startOfDay, addDays } from "date-fns";
 import { ReminderStatus, TaskStatus } from "@prisma/client";
 
 import type { DashboardSummary } from "@/modules/dashboard/types";
+import { serializeNoteSummary } from "@/lib/notes/serialize";
 import { serializeReminder, reminderInclude, getEffectiveRemindAt } from "@/lib/reminders/serialize";
 import { serializeTask } from "@/lib/tasks/serialize";
 import { prisma } from "@/lib/prisma/client";
+import { CourseStatus, ApplicationStatus } from "@prisma/client";
 
 export type { DashboardSummary };
 
@@ -21,13 +23,20 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
   const weekEnd = endOfDay(addDays(now, 7));
 
   const [
+    profile,
     tasksTodayRows,
     tasksOverdueRows,
     remindersRows,
+    notesRecentRows,
+    notesPinnedRows,
+    musicStat,
     notesCount,
     bookmarksCount,
     remindersUpcomingCount,
+    learningActiveCount,
+    applicationsActiveCount,
   ] = await Promise.all([
+    prisma.profile.findUnique({ where: { userId }, select: { dashboardFocus: true } }),
     prisma.task.findMany({
       where: {
         userId,
@@ -55,6 +64,21 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
       orderBy: { remindAt: "asc" },
       take: 20,
     }),
+    prisma.note.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+    }),
+    prisma.note.findMany({
+      where: { userId, pinned: true },
+      orderBy: { updatedAt: "desc" },
+      take: 3,
+    }),
+    prisma.trackStats.findFirst({
+      where: { userId },
+      include: { track: true },
+      orderBy: { lastPlayedAt: "desc" },
+    }),
     prisma.note.count({ where: { userId } }),
     prisma.bookmark.count({ where: { userId } }),
     prisma.reminder.count({
@@ -62,6 +86,22 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
         userId,
         status: { in: [ReminderStatus.PENDING, ReminderStatus.SNOOZED] },
         remindAt: { lte: weekEnd },
+      },
+    }),
+    prisma.course.count({
+      where: { userId, status: CourseStatus.ACTIVE },
+    }),
+    prisma.jobApplication.count({
+      where: {
+        userId,
+        status: {
+          in: [
+            ApplicationStatus.WISHLIST,
+            ApplicationStatus.APPLIED,
+            ApplicationStatus.SCREENING,
+            ApplicationStatus.INTERVIEW,
+          ],
+        },
       },
     }),
   ]);
@@ -88,18 +128,34 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
     }),
   ]);
 
+  const musicContinue = musicStat
+    ? {
+        videoId: musicStat.track.videoId,
+        title: musicStat.track.title,
+        channelTitle: musicStat.track.channelTitle,
+        thumbnailUrl: musicStat.track.thumbnailUrl,
+        lastPlayedAt: musicStat.lastPlayedAt.toISOString(),
+      }
+    : null;
+
   return {
     greeting: greetingForHour(now.getHours()),
+    focus: profile?.dashboardFocus ?? null,
     counts: {
       tasksToday: tasksTodayCount,
       tasksOverdue: tasksOverdueCount,
       notes: notesCount,
       remindersUpcoming: remindersUpcomingCount,
       bookmarks: bookmarksCount,
+      learningActive: learningActiveCount,
+      applicationsActive: applicationsActiveCount,
     },
     tasksToday: tasksTodayRows.map(serializeTask),
     tasksOverdue: tasksOverdueRows.map(serializeTask),
     remindersNext,
+    notesRecent: notesRecentRows.map(serializeNoteSummary),
+    notesPinned: notesPinnedRows.map(serializeNoteSummary),
+    musicContinue,
   };
 }
 

@@ -1,4 +1,7 @@
 import { createBookmark } from "@/lib/bookmarks/api-client";
+import { createApplication } from "@/lib/career/api-client";
+import { createCourse } from "@/lib/learning/api-client";
+import { createTransaction } from "@/lib/finance/api-client";
 import { createNote } from "@/lib/notes/api-client";
 import { createReminder } from "@/lib/reminders/api-client";
 import { createTask } from "@/lib/tasks/api-client";
@@ -64,10 +67,61 @@ export async function executeCommand(command: ParsedCommand): Promise<CommandExe
         };
       }
 
+      case "create-course": {
+        const { course } = await createCourse({ title: command.title });
+        return {
+          ok: true,
+          href: "/learning",
+          message: `Course created: ${course.title}`,
+        };
+      }
+
+      case "create-application": {
+        const { application } = await createApplication({
+          company: command.company,
+          role: command.role,
+          status: "APPLIED",
+          appliedAt: new Date().toISOString(),
+        });
+        return {
+          ok: true,
+          href: "/career",
+          message: `Application added: ${application.role} at ${application.company}`,
+        };
+      }
+
+      case "create-transaction": {
+        await createTransaction({
+          type: command.txType,
+          amount: command.amount,
+          description: command.description,
+          occurredAt: new Date().toISOString(),
+        });
+        return {
+          ok: true,
+          href: "/finance",
+          message: `${command.txType === "EXPENSE" ? "Expense" : "Income"} logged`,
+        };
+      }
+
+      case "set-focus": {
+        const res = await fetch("/api/dashboard/focus", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ focus: command.focus }),
+        });
+        if (!res.ok) throw new Error("Failed to set focus");
+        return {
+          ok: true,
+          href: "/dashboard",
+          message: `Focus set: ${command.focus}`,
+        };
+      }
+
       default:
         return {
           ok: false,
-          message: "Unknown command. Try: task …, note …, remind …, bookmark …, play …",
+          message: "Unknown command. Try: task …, learn …, apply …, expense …, play …",
         };
     }
   } catch (error) {

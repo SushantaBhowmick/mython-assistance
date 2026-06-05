@@ -5,9 +5,6 @@ import { Button } from "@/components/ui/button";
 import { getServiceById, type ServiceId } from "@/lib/services/registry";
 
 const VALID_IDS: ServiceId[] = [
-  "learning",
-  "career",
-  "finance",
   "ai",
   "automation",
 ];

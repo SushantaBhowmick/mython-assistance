@@ -12,16 +12,22 @@ export async function GET() {
       () => loadDashboardSummary(userId),
       {
         greeting: "Hello",
+        focus: null,
         counts: {
           tasksToday: 0,
           tasksOverdue: 0,
           notes: 0,
           remindersUpcoming: 0,
           bookmarks: 0,
+          learningActive: 0,
+          applicationsActive: 0,
         },
         tasksToday: [],
         tasksOverdue: [],
         remindersNext: [],
+        notesRecent: [],
+        notesPinned: [],
+        musicContinue: null,
       },
       "dashboard/summary",
     );

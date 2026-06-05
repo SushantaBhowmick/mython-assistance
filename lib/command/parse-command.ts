@@ -11,6 +11,10 @@ export type ParsedCommand =
   | { type: "create-reminder"; title: string; remindAt: Date }
   | { type: "music-search"; query: string }
   | { type: "create-bookmark"; title: string; url: string }
+  | { type: "create-course"; title: string }
+  | { type: "create-application"; company: string; role: string }
+  | { type: "create-transaction"; txType: "EXPENSE" | "INCOME"; amount: string; description: string }
+  | { type: "set-focus"; focus: string }
   | { type: "unknown"; raw: string };
 
 const NAV_ALIASES: Record<string, ServiceId | "profile" | "settings"> = {
@@ -31,6 +35,15 @@ const NAV_ALIASES: Record<string, ServiceId | "profile" | "settings"> = {
   bookmark: "bookmarks",
   links: "bookmarks",
   saved: "bookmarks",
+  learning: "learning",
+  learn: "learning",
+  course: "learning",
+  courses: "learning",
+  career: "career",
+  jobs: "career",
+  job: "career",
+  finance: "finance",
+  money: "finance",
   profile: "profile",
   settings: "settings",
 };
@@ -129,7 +142,73 @@ export function parseCommand(raw: string): ParsedCommand {
     return { type: "navigate", href: "/music/search", label: "Music search" };
   }
 
+  if (/^focus\s+/i.test(input)) {
+    const focus = input.replace(/^focus\s+/i, "").trim();
+    if (focus) return { type: "set-focus", focus };
+  }
+
+  if (/^(learn|course)\s+/i.test(input)) {
+    const title = input.replace(/^(learn|course)\s+/i, "").trim();
+    if (title) return { type: "create-course", title };
+  }
+
+  if (/^apply\s+/i.test(input)) {
+    const rest = input.replace(/^apply\s+/i, "").trim();
+    const at = rest.match(/\s+at\s+/i);
+    if (at) {
+      const [role, company] = rest.split(/\s+at\s+/i);
+      if (role && company) {
+        return { type: "create-application", role: role.trim(), company: company.trim() };
+      }
+    }
+    const parts = rest.split(/\s+/);
+    if (parts.length >= 2) {
+      return {
+        type: "create-application",
+        company: parts[0]!,
+        role: parts.slice(1).join(" "),
+      };
+    }
+  }
+
+  if (/^expense\s+/i.test(input)) {
+    const parsed = parseMoneyCommand(input.replace(/^expense\s+/i, "").trim(), "EXPENSE");
+    if (parsed) return parsed;
+  }
+
+  if (/^income\s+/i.test(input)) {
+    const parsed = parseMoneyCommand(input.replace(/^income\s+/i, "").trim(), "INCOME");
+    if (parsed) return parsed;
+  }
+
   return { type: "unknown", raw: input };
+}
+
+function parseMoneyCommand(
+  rest: string,
+  txType: "EXPENSE" | "INCOME",
+): ParsedCommand | null {
+  const amountLast = rest.match(/^(.+?)\s+(\d+(?:\.\d{1,2})?)$/);
+  if (amountLast) {
+    return {
+      type: "create-transaction",
+      txType,
+      amount: amountLast[2]!,
+      description: amountLast[1]!.trim(),
+    };
+  }
+
+  const amountFirst = rest.match(/^(\d+(?:\.\d{1,2})?)\s+(.+)$/);
+  if (amountFirst) {
+    return {
+      type: "create-transaction",
+      txType,
+      amount: amountFirst[1]!,
+      description: amountFirst[2]!.trim(),
+    };
+  }
+
+  return null;
 }
 
 export function describeCommand(command: ParsedCommand): string {
@@ -146,6 +225,14 @@ export function describeCommand(command: ParsedCommand): string {
       return `Search music: ${command.query}`;
     case "create-bookmark":
       return `Save bookmark: ${command.title}`;
+    case "create-course":
+      return `Create course: ${command.title}`;
+    case "create-application":
+      return `Apply: ${command.role} at ${command.company}`;
+    case "create-transaction":
+      return `${command.txType === "EXPENSE" ? "Expense" : "Income"}: ${command.description} (${command.amount})`;
+    case "set-focus":
+      return `Set focus: ${command.focus}`;
     default:
       return command.raw ? `No matching command` : "Type a command…";
   }

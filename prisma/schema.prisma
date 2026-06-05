@@ -25,11 +25,156 @@ model Profile {
   career       Json?
   experience   Json?
   education    Json?
-  projects     Json?
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  projects        Json?
+  dashboardFocus  String?   @map("dashboard_focus")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   @@map("profiles")
+}
+
+enum CourseStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum ApplicationStatus {
+  WISHLIST
+  APPLIED
+  SCREENING
+  INTERVIEW
+  OFFER
+  REJECTED
+  WITHDRAWN
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+model Course {
+  id          String       @id @default(cuid())
+  userId      String       @map("user_id")
+  title       String
+  description String?      @db.Text
+  platform    String?
+  sourceUrl   String?      @map("source_url")
+  status      CourseStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  topics      Topic[]
+  sessions    StudySession[]
+
+  @@index([userId, status])
+  @@map("courses")
+}
+
+model Topic {
+  id        String  @id @default(cuid())
+  courseId  String  @map("course_id")
+  title     String
+  completed Boolean @default(false)
+  position  Int     @default(0)
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@index([courseId])
+  @@map("topics")
+}
+
+model StudySession {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  courseId  String?  @map("course_id")
+  minutes   Int
+  notes     String?  @db.Text
+  studiedAt DateTime @default(now()) @map("studied_at")
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+
+  @@index([userId, studiedAt])
+  @@map("study_sessions")
+}
+
+model JobApplication {
+  id         String            @id @default(cuid())
+  userId     String            @map("user_id")
+  company    String
+  role       String
+  status     ApplicationStatus @default(WISHLIST)
+  jobUrl     String?           @map("job_url")
+  location   String?
+  salaryNote String?           @map("salary_note")
+  appliedAt  DateTime?         @map("applied_at")
+  noteId     String?           @map("note_id")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+  interviews Interview[]
+
+  @@index([userId, status])
+  @@map("job_applications")
+}
+
+model Interview {
+  id            String         @id @default(cuid())
+  applicationId String         @map("application_id")
+  scheduledAt   DateTime       @map("scheduled_at")
+  type          String?
+  notes         String?        @db.Text
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt])
+  @@map("interviews")
+}
+
+model FinanceCategory {
+  id           String          @id @default(cuid())
+  userId       String          @map("user_id")
+  name         String
+  icon         String?
+  type         TransactionType
+  transactions Transaction[]
+
+  @@unique([userId, name, type])
+  @@map("finance_categories")
+}
+
+model Transaction {
+  id          String           @id @default(cuid())
+  userId      String           @map("user_id")
+  type        TransactionType
+  amount      Decimal          @db.Decimal(12, 2)
+  categoryId  String?          @map("category_id")
+  description String?
+  occurredAt  DateTime         @map("occurred_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  category    FinanceCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, occurredAt])
+  @@map("transactions")
+}
+
+model AiBrief {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("ai_briefs")
+}
+
+model AutomationEvent {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  event     String
+  payload   Json
+  status    String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("automation_events")
 }
 
 enum TaskStatus {

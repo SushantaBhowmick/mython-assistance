@@ -3,6 +3,8 @@
 import {
   Bell,
   Bookmark,
+  BookOpen,
+  Brain,
   LayoutDashboard,
   ListTodo,
   LogOut,
@@ -10,6 +12,7 @@ import {
   Plus,
   StickyNote,
   User,
+  Wallet,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -35,6 +38,9 @@ const QUICK_EXAMPLES = [
   "note Docker networking",
   "remind Call mom tomorrow 9am",
   "bookmark https://nextjs.org/docs",
+  "learn Next.js App Router",
+  "apply Google at Software Engineer",
+  "expense lunch 250",
   "play acoustic playlist",
   "go dashboard",
 ];
@@ -45,6 +51,9 @@ const NAV_ITEMS = [
   { href: "/notes", label: "Notes", icon: StickyNote },
   { href: "/reminders", label: "Reminders", icon: Bell },
   { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
+  { href: "/learning", label: "Learning", icon: BookOpen },
+  { href: "/career", label: "Career", icon: Brain },
+  { href: "/finance", label: "Finance", icon: Wallet },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/music/search", label: "Search music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
