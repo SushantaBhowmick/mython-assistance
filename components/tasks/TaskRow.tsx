@@ -1,10 +1,16 @@
 "use client";
 
 import { format } from "date-fns";
+import { Bell, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { defaultRemindAtForTask } from "@/lib/cross-module/remind-from-task";
+import { createReminder } from "@/lib/reminders/api-client";
 import type { TaskSummary } from "@/modules/tasks/types";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +28,23 @@ interface TaskRowProps {
 
 export function TaskRow({ task, onToggleDone, toggling }: TaskRowProps) {
   const isDone = task.status === "DONE";
+  const [reminding, setReminding] = useState(false);
+
+  async function handleQuickRemind() {
+    setReminding(true);
+    try {
+      await createReminder({
+        title: task.title,
+        remindAt: defaultRemindAtForTask(task.dueAt),
+        taskId: task.id,
+      });
+      toast.success("Reminder set");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create reminder");
+    } finally {
+      setReminding(false);
+    }
+  }
 
   return (
     <article
@@ -71,6 +94,19 @@ export function TaskRow({ task, onToggleDone, toggling }: TaskRowProps) {
           )}
         </div>
       </div>
+
+      {!isDone && task.status !== "CANCELLED" && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          disabled={reminding}
+          aria-label="Set reminder"
+          onClick={() => void handleQuickRemind()}
+        >
+          {reminding ? <Loader2 className="size-4 animate-spin" /> : <Bell className="size-4" />}
+        </Button>
+      )}
     </article>
   );
 }

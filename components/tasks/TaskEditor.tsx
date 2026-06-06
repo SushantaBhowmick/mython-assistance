@@ -1,12 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { Bell, Loader2, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { CreateReminderDialog } from "@/components/reminders/CreateReminderDialog";
 import { Button } from "@/components/ui/button";
+import { defaultRemindAtForTask } from "@/lib/cross-module/remind-from-task";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,6 +48,15 @@ export function TaskEditor({ task: initial }: TaskEditorProps) {
   const [projectTag, setProjectTag] = useState(initial.projectTag ?? "");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const reminderDefaults = useMemo(
+    () => ({
+      title: title.trim() || initial.title,
+      remindAt: defaultRemindAtForTask(fromLocalDatetimeInput(dueAt) ?? initial.dueAt),
+      taskId: initial.id,
+    }),
+    [title, dueAt, initial.id, initial.title, initial.dueAt],
+  );
 
   async function handleSave() {
     setSaving(true);
@@ -91,6 +102,16 @@ export function TaskEditor({ task: initial }: TaskEditorProps) {
           {deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
           Delete
         </Button>
+        <CreateReminderDialog
+          defaults={reminderDefaults}
+          onCreated={() => toast.success("Reminder linked to this task")}
+          trigger={
+            <Button type="button" variant="outline">
+              <Bell className="size-4" />
+              Remind me
+            </Button>
+          }
+        />
       </div>
 
       <div className="space-y-2">

@@ -13,6 +13,16 @@ import {
 import { usePlayerStore } from "@/store/player-store";
 
 let playerInitPromise: Promise<void> | null = null;
+let suppressYtEvents = false;
+
+function setSuppressYtEvents(value: boolean, ms = 300) {
+  suppressYtEvents = value;
+  if (value) {
+    window.setTimeout(() => {
+      suppressYtEvents = false;
+    }, ms);
+  }
+}
 
 function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
   if (playerInitPromise) return playerInitPromise;
@@ -45,6 +55,8 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           if (store.muted) event.target.mute();
         },
         onStateChange: (event: { data: number }) => {
+          if (suppressYtEvents) return;
+
           const mapped = mapYtStateToPlayerState(event.data);
           usePlayerStore.getState().setPlayerState(mapped);
 
@@ -73,7 +85,6 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
 export function HiddenYouTubePlayer() {
   const mountRef = useRef<HTMLDivElement>(null);
   const loadedVideoIdRef = useRef<string | null>(null);
-  const suppressYtEventsRef = useRef(false);
   const lastRecordedRef = useRef<string | null>(null);
   const prevIsPlayingRef = useRef<boolean | null>(null);
   const initStartedRef = useRef(false);
@@ -101,16 +112,23 @@ export function HiddenYouTubePlayer() {
     if (!isReady || !currentTrack) return;
 
     const videoId = currentTrack.videoId;
-    if (loadedVideoIdRef.current === videoId) return;
+    const { lastKnownTime, isPlaying: shouldPlay } = usePlayerStore.getState();
+    const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
+
+    if (loadedVideoIdRef.current === videoId) {
+      if (shouldPlay) {
+        setSuppressYtEvents(true, 400);
+        playerController.play();
+        prevIsPlayingRef.current = true;
+      }
+      return;
+    }
 
     loadedVideoIdRef.current = videoId;
     lastRecordedRef.current = null;
     prevIsPlayingRef.current = null;
 
-    const { lastKnownTime, isPlaying: shouldPlay } = usePlayerStore.getState();
-    const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
-
-    suppressYtEventsRef.current = true;
+    setSuppressYtEvents(true, 800);
 
     if (shouldPlay) {
       playerController.loadVideo(videoId, startAt);
@@ -118,10 +136,6 @@ export function HiddenYouTubePlayer() {
       playerController.cueVideo(videoId, startAt);
       setCurrentTime(startAt);
     }
-
-    window.setTimeout(() => {
-      suppressYtEventsRef.current = false;
-    }, 300);
   }, [currentTrack, isReady, setCurrentTime]);
 
   useEffect(() => {
@@ -130,17 +144,13 @@ export function HiddenYouTubePlayer() {
     if (prevIsPlayingRef.current === isPlaying) return;
 
     prevIsPlayingRef.current = isPlaying;
-    suppressYtEventsRef.current = true;
+    setSuppressYtEvents(true, 400);
 
     if (isPlaying) {
       playerController.play();
     } else {
       playerController.pause();
     }
-
-    window.setTimeout(() => {
-      suppressYtEventsRef.current = false;
-    }, 150);
   }, [currentTrack?.videoId, isPlaying, isReady]);
 
   useEffect(() => {

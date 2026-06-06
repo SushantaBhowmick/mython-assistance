@@ -118,6 +118,13 @@ export async function executeCommand(command: ParsedCommand): Promise<CommandExe
         };
       }
 
+      case "generate-brief":
+        return {
+          ok: true,
+          href: "/ai?generate=1",
+          message: "Opening AI brief",
+        };
+
       default:
         return {
           ok: false,

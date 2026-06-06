@@ -15,6 +15,7 @@ export type ParsedCommand =
   | { type: "create-application"; company: string; role: string }
   | { type: "create-transaction"; txType: "EXPENSE" | "INCOME"; amount: string; description: string }
   | { type: "set-focus"; focus: string }
+  | { type: "generate-brief" }
   | { type: "unknown"; raw: string };
 
 const NAV_ALIASES: Record<string, ServiceId | "profile" | "settings"> = {
@@ -44,6 +45,8 @@ const NAV_ALIASES: Record<string, ServiceId | "profile" | "settings"> = {
   job: "career",
   finance: "finance",
   money: "finance",
+  ai: "ai",
+  automation: "automation",
   profile: "profile",
   settings: "settings",
 };
@@ -87,6 +90,10 @@ export function parseCommand(raw: string): ParsedCommand {
     const target = input.replace(/^(go|open)\s+/i, "").trim();
     const nav = resolveNavigation(target.split(/\s+/)[0] ?? "");
     if (nav) return nav;
+  }
+
+  if (lower === "brief" || lower === "today" || lower === "today brief") {
+    return { type: "generate-brief" };
   }
 
   const navOnly = resolveNavigation(input);
@@ -233,6 +240,8 @@ export function describeCommand(command: ParsedCommand): string {
       return `${command.txType === "EXPENSE" ? "Expense" : "Income"}: ${command.description} (${command.amount})`;
     case "set-focus":
       return `Set focus: ${command.focus}`;
+    case "generate-brief":
+      return "Generate today's AI brief";
     default:
       return command.raw ? `No matching command` : "Type a command…";
   }

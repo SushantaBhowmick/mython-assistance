@@ -46,7 +46,7 @@ export function MusicTrackCard({
   showActions = true,
   className,
 }: MusicTrackCardProps) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, selectTrack } = usePlayerStore();
   const [favorite, setFavorite] = useState(isFavorite);
   const [trackId, setTrackId] = useState(savedTrackId ?? track.id);
   const [saving, setSaving] = useState(false);
@@ -96,12 +96,7 @@ export function MusicTrackCard({
   }
 
   function handlePlay() {
-    if (isCurrent) {
-      togglePlay();
-      return;
-    }
-
-    playTrack(track, queue ?? [track], 0);
+    selectTrack(track, queue ?? [track]);
   }
 
   return (
@@ -142,7 +137,10 @@ export function MusicTrackCard({
             <Button
               variant="ghost"
               size="icon-sm"
-              onClick={handleFavoriteToggle}
+              onClick={(event) => {
+                event.stopPropagation();
+                void handleFavoriteToggle();
+              }}
               aria-label={favorite ? "Remove favorite" : "Add favorite"}
             >
               <Heart className={cn("size-4", favorite && "fill-red-500 text-red-500")} />
@@ -150,7 +148,12 @@ export function MusicTrackCard({
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="More actions">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="More actions"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <MoreHorizontal className="size-4" />
                 </Button>
               </DropdownMenuTrigger>

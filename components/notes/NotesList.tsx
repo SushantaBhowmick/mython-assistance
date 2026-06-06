@@ -1,6 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 import { EmptyState } from "@/components/music/EmptyState";
@@ -12,13 +13,15 @@ import { listNotes, updateNote } from "@/lib/notes/api-client";
 import type { NoteSummary } from "@/modules/notes/types";
 
 export function NotesList() {
+  const searchParams = useSearchParams();
+  const initialPinned = searchParams.get("pinned") === "1";
   const [notes, setNotes] = useState<NoteSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
-  const [filter, setFilter] = useState<"all" | "pinned">("all");
+  const [filter, setFilter] = useState<"all" | "pinned">(initialPinned ? "pinned" : "all");
   const [pinningId, setPinningId] = useState<string | null>(null);
 
   const load = useCallback(async () => {

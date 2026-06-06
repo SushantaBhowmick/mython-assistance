@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,17 @@ import { listNotes } from "@/lib/notes/api-client";
 import { listTasks } from "@/lib/tasks/api-client";
 import type { ReminderSummary } from "@/modules/reminders/types";
 
+export interface ReminderDialogDefaults {
+  title?: string;
+  remindAt?: string;
+  taskId?: string;
+  noteId?: string;
+}
+
 interface CreateReminderDialogProps {
   onCreated: (reminder: ReminderSummary) => void;
+  defaults?: ReminderDialogDefaults;
+  trigger?: React.ReactNode;
 }
 
 function defaultRemindAtLocal() {
@@ -37,7 +46,17 @@ function defaultRemindAtLocal() {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function CreateReminderDialog({ onCreated }: CreateReminderDialogProps) {
+function toLocalDatetimeInput(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export function CreateReminderDialog({
+  onCreated,
+  defaults,
+  trigger,
+}: CreateReminderDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [remindAt, setRemindAt] = useState(defaultRemindAtLocal());
@@ -46,9 +65,23 @@ export function CreateReminderDialog({ onCreated }: CreateReminderDialogProps) {
   const [tasks, setTasks] = useState<Array<{ id: string; title: string }>>([]);
   const [notes, setNotes] = useState<Array<{ id: string; title: string }>>([]);
   const [loading, setLoading] = useState(false);
+  const appliedDefaultsRef = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      appliedDefaultsRef.current = false;
+      return;
+    }
+
+    if (!appliedDefaultsRef.current) {
+      appliedDefaultsRef.current = true;
+      setTitle(defaults?.title ?? "");
+      setRemindAt(
+        defaults?.remindAt ? toLocalDatetimeInput(defaults.remindAt) : defaultRemindAtLocal(),
+      );
+      setTaskId(defaults?.taskId ?? "none");
+      setNoteId(defaults?.noteId ?? "none");
+    }
 
     Promise.all([
       listTasks({ filter: "all" }).then((r) => r.tasks.slice(0, 30)),
@@ -59,7 +92,7 @@ export function CreateReminderDialog({ onCreated }: CreateReminderDialogProps) {
         setNotes(noteList.map((n) => ({ id: n.id, title: n.title })));
       })
       .catch(() => undefined);
-  }, [open]);
+  }, [open, defaults]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -94,10 +127,12 @@ export function CreateReminderDialog({ onCreated }: CreateReminderDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          New reminder
-        </Button>
+        {trigger ?? (
+          <Button>
+            <Plus className="size-4" />
+            New reminder
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

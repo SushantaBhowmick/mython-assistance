@@ -87,10 +87,11 @@ export function DashboardHome() {
     (s) => s.id,
   );
 
+  const pinnedNotes = summary?.notesPinned ?? [];
   const recentNotes = summary
-    ? [...summary.notesPinned, ...summary.notesRecent.filter(
-        (n) => !summary.notesPinned.some((p) => p.id === n.id),
-      )].slice(0, 3)
+    ? summary.notesRecent
+        .filter((n) => !pinnedNotes.some((p) => p.id === n.id))
+        .slice(0, 3)
     : [];
 
   return (
@@ -211,6 +212,33 @@ export function DashboardHome() {
         </section>
       )}
 
+      {!loading && summary && pinnedNotes.length > 0 && (
+        <section className="space-y-4 rounded-2xl border border-primary/20 bg-card/50 p-5 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-sm font-medium uppercase tracking-wider text-muted-foreground">
+              <StickyNote className="size-4 text-primary" />
+              Pinned notes
+            </h2>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/notes?pinned=1">View all</Link>
+            </Button>
+          </div>
+          <ul className="space-y-2">
+            {pinnedNotes.map((note) => (
+              <li key={note.id}>
+                <Link
+                  href={`/notes/${note.id}`}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-primary/15 bg-background/60 px-3 py-2 text-sm transition-colors hover:bg-accent/50"
+                >
+                  <span className="truncate font-medium">{note.title}</span>
+                  <span className="shrink-0 text-xs text-primary">Pinned</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {!loading && summary && recentNotes.length > 0 && (
         <section className="space-y-4 rounded-2xl border bg-card/50 p-5 backdrop-blur-sm">
           <div className="flex items-center justify-between">
@@ -229,9 +257,6 @@ export function DashboardHome() {
                   className="flex items-center justify-between gap-2 rounded-lg border bg-background/60 px-3 py-2 text-sm transition-colors hover:bg-accent/50"
                 >
                   <span className="truncate font-medium">{note.title}</span>
-                  {note.pinned ? (
-                    <span className="shrink-0 text-xs text-primary">Pinned</span>
-                  ) : null}
                 </Link>
               </li>
             ))}

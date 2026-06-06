@@ -23,17 +23,12 @@ export function MusicTrackTile({
   reason,
   className,
 }: MusicTrackTileProps) {
-  const { currentTrack, isPlaying, playTrack, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, selectTrack } = usePlayerStore();
   const isCurrent = currentTrack?.videoId === track.videoId;
   const playing = isCurrent && isPlaying;
 
   function handlePlay() {
-    if (isCurrent) {
-      togglePlay();
-      return;
-    }
-
-    playTrack(track, queue ?? [track], 0);
+    selectTrack(track, queue ?? [track]);
   }
 
   return (

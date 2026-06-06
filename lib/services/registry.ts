@@ -6,8 +6,10 @@ import {
   LayoutDashboard,
   ListTodo,
   Music2,
+  Sparkles,
   StickyNote,
   Wallet,
+  Webhook,
   type LucideIcon,
 } from "lucide-react";
 
@@ -118,6 +120,24 @@ export const PERSONAL_SERVICES: PersonalService[] = [
     icon: Wallet,
     status: "active",
     accent: "from-lime-500/20 to-green-500/10",
+  },
+  {
+    id: "ai",
+    name: "AI Brief",
+    description: "Gemini-powered daily plan from your data",
+    href: "/ai",
+    icon: Sparkles,
+    status: "active",
+    accent: "from-fuchsia-500/20 to-pink-500/10",
+  },
+  {
+    id: "automation",
+    name: "Automation",
+    description: "Webhooks for n8n and external workflows",
+    href: "/settings/automation",
+    icon: Webhook,
+    status: "active",
+    accent: "from-slate-500/20 to-zinc-500/10",
   },
 ];
 

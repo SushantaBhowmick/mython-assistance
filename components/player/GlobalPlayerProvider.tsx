@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 import { HiddenYouTubePlayer } from "@/components/player/HiddenYouTubePlayer";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
+import { usePlaybackRecovery } from "@/lib/player/use-playback-recovery";
 import {
   clearMediaSessionActions,
   registerMediaSessionActions,
@@ -14,6 +15,8 @@ import {
 import { usePlayerStore } from "@/store/player-store";
 
 export function GlobalPlayerProvider({ children }: { children: React.ReactNode }) {
+  usePlaybackRecovery();
+
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const duration = usePlayerStore((s) => s.duration);

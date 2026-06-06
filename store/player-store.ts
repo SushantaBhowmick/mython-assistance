@@ -32,6 +32,8 @@ interface PlayerStoreState {
 interface PlayerStoreActions {
   setTrack: (track: MusicTrack, queue?: MusicTrack[]) => void;
   playTrack: (track: MusicTrack, queue?: MusicTrack[], startAt?: number) => void;
+  /** User tapped a track row — always start/resume playback, never pause. */
+  selectTrack: (track: MusicTrack, queue?: MusicTrack[]) => void;
   playShuffledQueue: (tracks: MusicTrack[]) => void;
   pause: () => void;
   resume: () => void;
@@ -162,6 +164,19 @@ export const usePlayerStore = create<PlayerStore>()(
           duration: 0,
           playerState: "buffering",
         });
+      },
+
+      selectTrack: (track, queue) => {
+        const { currentTrack } = get();
+        if (currentTrack?.videoId === track.videoId) {
+          get().resume();
+          if (playerController.isReady()) {
+            playerController.play();
+          }
+          return;
+        }
+
+        get().playTrack(track, queue ?? [track], 0);
       },
 
       playShuffledQueue: (tracks) => {

@@ -11,10 +11,10 @@ interface ContinueMusicWidgetProps {
 }
 
 export function ContinueMusicWidget({ track }: ContinueMusicWidgetProps) {
-  const playTrack = usePlayerStore((s) => s.playTrack);
+  const selectTrack = usePlayerStore((s) => s.selectTrack);
 
   function handlePlay() {
-    playTrack({
+    selectTrack({
       videoId: track.videoId,
       title: track.title,
       channelTitle: track.channelTitle,

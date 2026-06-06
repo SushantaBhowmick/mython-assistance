@@ -10,6 +10,7 @@ import {
   LogOut,
   Music2,
   Settings,
+  Sparkles,
   StickyNote,
   User,
   Wallet,
@@ -19,12 +20,17 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { BrandMark } from "@/components/shell/BrandMark";
 import { CommandPaletteTrigger } from "@/components/shell/CommandPaletteTrigger";
+import {
+  MOBILE_FOOTER_OFFSET,
+  MobileNavMenu,
+} from "@/components/shell/MobileNavMenu";
 import { PlatformBackdrop } from "@/components/shell/PlatformBackdrop";
 import { ReminderDispatchPoller } from "@/components/notifications/ReminderDispatchPoller";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
+import { usePlayerStore } from "@/store/player-store";
 
 const desktopNavItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -35,20 +41,16 @@ const desktopNavItems = [
   { href: "/learning", label: "Learning", icon: BookOpen },
   { href: "/career", label: "Career", icon: Brain },
   { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/ai", label: "AI brief", icon: Sparkles },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-const mobileNavItems = [
+const mobilePrimaryNav = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/tasks", label: "Tasks", icon: ListTodo },
   { href: "/notes", label: "Notes", icon: StickyNote },
-  { href: "/reminders", label: "Alerts", icon: Bell },
-  { href: "/bookmarks", label: "Saved", icon: Bookmark },
-  { href: "/learning", label: "Learn", icon: BookOpen },
-  { href: "/career", label: "Jobs", icon: Brain },
-  { href: "/finance", label: "Money", icon: Wallet },
   { href: "/music", label: "Music", icon: Music2 },
 ];
 
@@ -65,6 +67,7 @@ function matchActive(pathname: string, href: string) {
   if (href === "/learning") return pathname === "/learning" || pathname.startsWith("/learning/");
   if (href === "/career") return pathname === "/career" || pathname.startsWith("/career/");
   if (href === "/finance") return pathname === "/finance" || pathname.startsWith("/finance/");
+  if (href === "/ai") return pathname === "/ai" || pathname.startsWith("/ai/");
   if (href === "/music") return pathname === "/music" || pathname.startsWith("/music/");
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -72,6 +75,7 @@ function matchActive(pathname: string, href: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const currentTrack = usePlayerStore((s) => s.currentTrack);
 
   async function handleLogout() {
     const supabase = createClient();
@@ -113,7 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Button
                 variant="ghost"
                 className="mt-1 justify-start gap-2 px-3 text-muted-foreground"
-                onClick={handleLogout}
+                onClick={() => void handleLogout()}
               >
                 <LogOut className="size-4" />
                 Log out
@@ -125,43 +129,44 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        <main
+          className={cn(
+            "min-w-0 flex-1 md:pb-0",
+            currentTrack
+              ? "pb-[calc(var(--mobile-footer)+4.5rem+env(safe-area-inset-bottom))] md:pb-0"
+              : "pb-[calc(var(--mobile-footer)+env(safe-area-inset-bottom))] md:pb-0",
+          )}
+          style={{ ["--mobile-footer" as string]: MOBILE_FOOTER_OFFSET }}
+        >
           <div className="mb-4 flex items-center justify-between md:hidden">
             <BrandMark size="sm" />
             <div className="flex items-center gap-1">
               <CommandPaletteTrigger compact />
-              <Button asChild variant="ghost" size="icon-sm">
-                <Link href="/profile" aria-label="Profile">
-                  <User className="size-4" />
-                </Link>
-              </Button>
-              <ThemeToggle />
-              <Button variant="ghost" size="icon-sm" onClick={handleLogout} aria-label="Log out">
-                <LogOut className="size-4" />
-              </Button>
+              <MobileNavMenu variant="platform" trigger="profile" />
             </div>
           </div>
           {children}
         </main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 px-1 py-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-around gap-0.5">
-          {mobileNavItems.map((item) => (
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/90 px-2 py-1.5 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-around">
+          {mobilePrimaryNav.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-0.5 py-1 text-[10px] transition-colors",
+                "flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] transition-colors",
                 matchActive(pathname, item.href)
                   ? "text-primary"
                   : "text-muted-foreground",
               )}
             >
-              <item.icon className="size-4 shrink-0" />
+              <item.icon className="size-5 shrink-0" />
               <span className="truncate">{item.label}</span>
             </Link>
           ))}
+          <MobileNavMenu variant="platform" trigger="footer" />
         </div>
       </nav>
     </div>

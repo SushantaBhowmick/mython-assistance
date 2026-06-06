@@ -10,9 +10,11 @@ import {
   LogOut,
   Music2,
   Plus,
+  Sparkles,
   StickyNote,
   User,
   Wallet,
+  Webhook,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,6 +43,7 @@ const QUICK_EXAMPLES = [
   "learn Next.js App Router",
   "apply Google at Software Engineer",
   "expense lunch 250",
+  "brief",
   "play acoustic playlist",
   "go dashboard",
 ];
@@ -54,6 +57,8 @@ const NAV_ITEMS = [
   { href: "/learning", label: "Learning", icon: BookOpen },
   { href: "/career", label: "Career", icon: Brain },
   { href: "/finance", label: "Finance", icon: Wallet },
+  { href: "/ai", label: "AI brief", icon: Sparkles },
+  { href: "/settings/automation", label: "Automation", icon: Webhook },
   { href: "/music", label: "Music", icon: Music2 },
   { href: "/music/search", label: "Search music", icon: Music2 },
   { href: "/profile", label: "Profile", icon: User },
@@ -126,7 +131,26 @@ export function GlobalCommandPalette({ open, onOpenChange }: GlobalCommandPalett
     if (running) return;
 
     setRunning(true);
-    const result = await executeCommand(command);
+    let resolved = command;
+    if (command.type === "unknown" && command.raw.trim().length > 2) {
+      try {
+        const res = await fetch("/api/ai/parse-command", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input: command.raw }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.command?.type && data.command.type !== "unknown") {
+            resolved = data.command;
+          }
+        }
+      } catch {
+        // Fall back to rule-based result
+      }
+    }
+
+    const result = await executeCommand(resolved);
     setRunning(false);
 
     if (!result.ok) {

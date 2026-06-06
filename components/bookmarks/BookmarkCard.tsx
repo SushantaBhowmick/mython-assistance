@@ -1,8 +1,13 @@
 "use client";
 
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, StickyNote, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { noteFromBookmark } from "@/lib/cross-module/bookmark-to-note";
+import { createNote } from "@/lib/notes/api-client";
 import type { BookmarkSummary } from "@/modules/bookmarks/types";
 
 interface BookmarkCardProps {
@@ -20,6 +25,22 @@ function hostname(url: string) {
 }
 
 export function BookmarkCard({ bookmark, busy, onDelete }: BookmarkCardProps) {
+  const router = useRouter();
+  const [savingNote, setSavingNote] = useState(false);
+
+  async function handleSaveAsNote() {
+    setSavingNote(true);
+    try {
+      const { note } = await createNote(noteFromBookmark(bookmark));
+      toast.success("Saved as note");
+      router.push(`/notes/${note.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create note");
+    } finally {
+      setSavingNote(false);
+    }
+  }
+
   return (
     <article className="rounded-xl border bg-card p-4">
       <div className="flex items-start justify-between gap-3">
@@ -41,12 +62,22 @@ export function BookmarkCard({ bookmark, busy, onDelete }: BookmarkCardProps) {
           <Trash2 className="size-4" />
         </Button>
       </div>
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         <Button asChild variant="outline" size="sm">
           <a href={bookmark.url} target="_blank" rel="noopener noreferrer">
             <ExternalLink className="size-4" />
             Open link
           </a>
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={busy || savingNote}
+          onClick={() => void handleSaveAsNote()}
+        >
+          {savingNote ? <Loader2 className="size-4 animate-spin" /> : <StickyNote className="size-4" />}
+          Save as note
         </Button>
       </div>
     </article>
