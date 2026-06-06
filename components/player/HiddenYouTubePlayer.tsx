@@ -3,25 +3,16 @@
 import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
-import { enginePlay } from "@/lib/player/engine-sync";
+import { applyPlaybackIntent, handleYtStateChange } from "@/lib/player/player-engine";
 import { playerController } from "@/lib/player/player-controller";
 import {
   loadYouTubeIframeApi,
   mapYtStateToPlayerState,
-  YT_PLAYER_STATE,
   type YTPlayer,
 } from "@/lib/player/youtube-types";
 import { usePlayerStore } from "@/store/player-store";
 
 let playerInitPromise: Promise<void> | null = null;
-let suppressYtEvents = false;
-
-function setSuppressYtEvents(ms = 300) {
-  suppressYtEvents = true;
-  window.setTimeout(() => {
-    suppressYtEvents = false;
-  }, ms);
-}
 
 function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
   if (playerInitPromise) return playerInitPromise;
@@ -29,12 +20,11 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
   playerInitPromise = (async () => {
     await loadYouTubeIframeApi();
     if (!window.YT) return;
-
     if (playerController.isReady()) return;
 
     new window.YT.Player(container, {
-      height: "0",
-      width: "0",
+      height: "2",
+      width: "2",
       playerVars: {
         autoplay: 0,
         controls: 0,
@@ -53,36 +43,11 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           event.target.setVolume(store.volume);
           if (store.muted) event.target.mute();
 
-          if (store.currentTrack && store.isPlaying) {
-            enginePlay(store.currentTrack, store.lastKnownTime);
-          }
+          applyPlaybackIntent();
         },
         onStateChange: (event: { data: number }) => {
-          if (suppressYtEvents) return;
-
-          const mapped = mapYtStateToPlayerState(event.data);
-          usePlayerStore.getState().setPlayerState(mapped);
-
-          if (event.data === YT_PLAYER_STATE.ENDED) {
-            usePlayerStore.getState().next();
-            window.setTimeout(() => {
-              const { currentTrack, isPlaying } = usePlayerStore.getState();
-              if (currentTrack && isPlaying) {
-                enginePlay(currentTrack, 0);
-              }
-            }, 0);
-            return;
-          }
-
-          const store = usePlayerStore.getState();
-
-          if (event.data === YT_PLAYER_STATE.PLAYING && !store.isPlaying) {
-            usePlayerStore.setState({ isPlaying: true });
-          }
-
-          if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
-            usePlayerStore.setState({ isPlaying: false });
-          }
+          usePlayerStore.getState().setPlayerState(mapYtStateToPlayerState(event.data));
+          handleYtStateChange(event.data);
         },
       },
     });
@@ -93,9 +58,7 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
 
 export function HiddenYouTubePlayer() {
   const mountRef = useRef<HTMLDivElement>(null);
-  const loadedVideoIdRef = useRef<string | null>(null);
   const lastRecordedRef = useRef<string | null>(null);
-  const prevIsPlayingRef = useRef<boolean | null>(null);
   const initStartedRef = useRef(false);
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
@@ -103,8 +66,6 @@ export function HiddenYouTubePlayer() {
   const isReady = usePlayerStore((s) => s.isReady);
   const volume = usePlayerStore((s) => s.volume);
   const muted = usePlayerStore((s) => s.muted);
-
-  const setCurrentTime = usePlayerStore((s) => s.setCurrentTime);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -116,51 +77,6 @@ export function HiddenYouTubePlayer() {
       playerInitPromise = null;
     });
   }, []);
-
-  useEffect(() => {
-    if (!isReady || !currentTrack) return;
-
-    const videoId = currentTrack.videoId;
-    const { lastKnownTime, isPlaying: shouldPlay } = usePlayerStore.getState();
-    const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
-
-    if (loadedVideoIdRef.current === videoId) {
-      if (shouldPlay) {
-        setSuppressYtEvents(400);
-        playerController.play();
-        prevIsPlayingRef.current = true;
-      }
-      return;
-    }
-
-    loadedVideoIdRef.current = videoId;
-    lastRecordedRef.current = null;
-    prevIsPlayingRef.current = null;
-
-    setSuppressYtEvents(800);
-
-    if (shouldPlay) {
-      playerController.loadVideo(videoId, startAt);
-    } else {
-      playerController.cueVideo(videoId, startAt);
-      setCurrentTime(startAt);
-    }
-  }, [currentTrack, isReady, setCurrentTime]);
-
-  useEffect(() => {
-    if (!isReady || !currentTrack) return;
-    if (loadedVideoIdRef.current !== currentTrack.videoId) return;
-    if (prevIsPlayingRef.current === isPlaying) return;
-
-    prevIsPlayingRef.current = isPlaying;
-    setSuppressYtEvents(400);
-
-    if (isPlaying) {
-      playerController.play();
-    } else {
-      playerController.pause();
-    }
-  }, [currentTrack?.videoId, isPlaying, isReady]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -183,10 +99,7 @@ export function HiddenYouTubePlayer() {
       const time = playerController.getCurrentTime();
       const store = usePlayerStore.getState();
 
-      if (duration > 0) {
-        store.setDuration(duration);
-      }
-
+      if (duration > 0) store.setDuration(duration);
       if (Number.isFinite(time) && time >= 0) {
         store.setCurrentTime(time);
         store.setLastKnownTime(time);
@@ -201,17 +114,26 @@ export function HiddenYouTubePlayer() {
     if (lastRecordedRef.current === currentTrack.videoId) return;
 
     lastRecordedRef.current = currentTrack.videoId;
-    recordHistory({ track: currentTrack }).catch(() => {
-      // History is best-effort.
-    });
+    recordHistory({ track: currentTrack }).catch(() => undefined);
   }, [currentTrack, isPlaying]);
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") {
+        applyPlaybackIntent();
+      }
+    }
+
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
 
   return (
     <div
-      className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-px w-px overflow-hidden opacity-0"
+      className="pointer-events-none fixed bottom-0 left-0 z-[1] h-[2px] w-[2px] overflow-hidden opacity-[0.02]"
       aria-hidden
     >
-      <div ref={mountRef} />
+      <div ref={mountRef} className="h-[2px] w-[2px]" />
     </div>
   );
 }
