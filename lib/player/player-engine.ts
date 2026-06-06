@@ -238,6 +238,8 @@ export function teardownPlayerSession() {
 
 export function initPlayerEngineSubscription() {
   return usePlayerStore.subscribe((state, prev) => {
+    if (!state.hasHydrated) return;
+
     if (!state.currentTrack && prev.currentTrack) {
       teardownPlayerSession();
       return;
@@ -264,8 +266,8 @@ export function resetLoadedVideo() {
 }
 
 export function handlePlaybackLifecycleEvent() {
-  const { currentTrack, isPlaying } = usePlayerStore.getState();
-  if (!currentTrack) return;
+  const { currentTrack, isPlaying, isReady } = usePlayerStore.getState();
+  if (!currentTrack || !isReady || !playerController.isReady()) return;
 
   if (document.visibilityState === "hidden" && isPlaying) {
     startAudioKeepalive();
@@ -284,8 +286,8 @@ export function initPlaybackLifecycleListeners() {
   const onLifecycle = () => handlePlaybackLifecycleEvent();
 
   const onBlur = () => {
-    const { isPlaying, currentTrack } = usePlayerStore.getState();
-    if (isPlaying && currentTrack) {
+    const { isPlaying, currentTrack, isReady } = usePlayerStore.getState();
+    if (isPlaying && currentTrack && isReady && playerController.isReady()) {
       startAudioKeepalive();
       applyPlaybackIntent();
     }

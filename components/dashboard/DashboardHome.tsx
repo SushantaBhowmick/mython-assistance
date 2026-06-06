@@ -71,12 +71,24 @@ export function DashboardHome() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function reload() {
-    fetch("/api/dashboard/summary", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => setSummary(data))
-      .catch(() => setSummary(null))
-      .finally(() => setLoading(false));
+  async function reload() {
+    try {
+      const response = await fetch("/api/dashboard/summary", { cache: "no-store" });
+      if (!response.ok) {
+        setSummary(null);
+        return;
+      }
+      const text = await response.text();
+      if (!text.trim()) {
+        setSummary(null);
+        return;
+      }
+      setSummary(JSON.parse(text) as DashboardSummary);
+    } catch {
+      setSummary(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {

@@ -13,14 +13,14 @@ import {
 import { usePlayerStore } from "@/store/player-store";
 
 let playerInitPromise: Promise<void> | null = null;
+let initGeneration = 0;
 
-function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
+function ensureYouTubePlayer(container: HTMLElement, generation: number): Promise<void> {
   if (playerInitPromise) return playerInitPromise;
 
   playerInitPromise = (async () => {
     await loadYouTubeIframeApi();
-    if (!window.YT) return;
-    if (playerController.isReady()) return;
+    if (!window.YT || generation !== initGeneration) return;
 
     new window.YT.Player(container, {
       height: "200",
@@ -37,6 +37,15 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
       },
       events: {
         onReady: (event: { target: YTPlayer }) => {
+          if (generation !== initGeneration) {
+            try {
+              event.target.destroy();
+            } catch {
+              // ignore detached iframe
+            }
+            return;
+          }
+
           playerController.setInstance(event.target);
           usePlayerStore.getState().setReady(true);
 
@@ -60,7 +69,6 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
 export function HiddenYouTubePlayer() {
   const mountRef = useRef<HTMLDivElement>(null);
   const lastRecordedRef = useRef<string | null>(null);
-  const initStartedRef = useRef(false);
 
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
@@ -70,13 +78,26 @@ export function HiddenYouTubePlayer() {
 
   useEffect(() => {
     const container = mountRef.current;
-    if (!container || initStartedRef.current) return;
+    if (!container) return;
 
-    initStartedRef.current = true;
-    ensureYouTubePlayer(container).catch(() => {
-      initStartedRef.current = false;
-      playerInitPromise = null;
+    initGeneration += 1;
+    const generation = initGeneration;
+
+    playerController.destroy();
+    playerInitPromise = null;
+    usePlayerStore.getState().setReady(false);
+
+    ensureYouTubePlayer(container, generation).catch(() => {
+      if (generation === initGeneration) {
+        playerInitPromise = null;
+      }
     });
+
+    return () => {
+      playerController.destroy();
+      playerInitPromise = null;
+      usePlayerStore.getState().setReady(false);
+    };
   }, []);
 
   useEffect(() => {

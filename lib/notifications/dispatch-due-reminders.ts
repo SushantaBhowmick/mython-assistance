@@ -20,7 +20,6 @@ export async function dispatchDueRemindersForUser(userId: string) {
   }
 
   const due = await findDueRemindersForUser(userId);
-  console.log(due)
   if (due.length === 0) {
     return { sent: 0, skipped: "none_due" as const };
   }

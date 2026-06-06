@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
+import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 
 import { playerController } from "@/lib/player/player-controller";
 import type { MusicTrack } from "@/types/music";
@@ -56,6 +56,22 @@ interface PlayerStoreActions {
 }
 
 export type PlayerStore = PlayerStoreState & PlayerStoreActions;
+
+const playerPersistStorage: StateStorage = {
+  getItem: (name) => {
+    const raw = localStorage.getItem(name);
+    if (!raw?.trim()) return null;
+    try {
+      JSON.parse(raw);
+      return raw;
+    } catch {
+      localStorage.removeItem(name);
+      return null;
+    }
+  },
+  setItem: (name, value) => localStorage.setItem(name, value),
+  removeItem: (name) => localStorage.removeItem(name),
+};
 
 const initialState: PlayerStoreState = {
   currentTrack: null,
@@ -354,7 +370,7 @@ export const usePlayerStore = create<PlayerStore>()(
     }),
     {
       name: "mython-player",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => playerPersistStorage),
       partialize: (state) => ({
         currentTrack: state.currentTrack,
         queue: state.queue,
