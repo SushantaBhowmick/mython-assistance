@@ -6,14 +6,6 @@ import {
   releaseMediaSession,
   updateMediaSessionPlaybackState,
 } from "@/lib/media-session";
-import {
-  isBackgroundAudioActive,
-  pauseBackgroundAudio,
-  prefetchBackgroundStream,
-  resumeBackgroundAudio,
-  startBackgroundAudio,
-  stopBackgroundAudio,
-} from "@/lib/player/background-audio-engine";
 import { startAudioKeepalive, stopAudioKeepalive } from "@/lib/player/audio-keepalive";
 import { setSuppressYtEvents } from "@/lib/player/engine-sync";
 import { acquirePlaybackLock, releasePlaybackLock } from "@/lib/player/playback-lock";
@@ -25,7 +17,6 @@ let loadedVideoId: string | null = null;
 let backgroundTimer: number | null = null;
 let wakeLock: WakeLockSentinel | null = null;
 let stalledTicks = 0;
-let switchingMode = false;
 
 export function getLoadedVideoId() {
   return loadedVideoId;
@@ -81,11 +72,10 @@ async function releaseWakeLock() {
   wakeLock = null;
 }
 
-/** Fallback: reload the YouTube iframe when background audio is unavailable. */
+/** Reload the YouTube iframe after the OS suspends it in the background. */
 export function forceBackgroundResume() {
   const { currentTrack, isPlaying, isReady } = usePlayerStore.getState();
   if (!currentTrack || !isPlaying || !isReady || !playerController.isReady()) return;
-  if (isBackgroundAudioActive()) return;
 
   const videoId = currentTrack.videoId;
   const startAt = currentEngineTime();
@@ -101,72 +91,9 @@ export function forceBackgroundResume() {
   snapshotMediaSession();
 }
 
-async function enterBackgroundPlayback() {
-  if (switchingMode) return;
-  switchingMode = true;
-
-  try {
-    const { currentTrack, isPlaying, isReady } = usePlayerStore.getState();
-    if (!currentTrack || !isPlaying || !isReady) return;
-
-    const startAt = currentEngineTime();
-    setSuppressYtEvents(800);
-    playerController.pause();
-
-    const ok = await startBackgroundAudio(currentTrack.videoId, startAt);
-    if (ok) {
-      stopAudioKeepalive();
-      snapshotMediaSession();
-      updateMediaSessionPlaybackState(true);
-      return;
-    }
-
-    startAudioKeepalive();
-    forceBackgroundResume();
-  } finally {
-    switchingMode = false;
-  }
-}
-
-async function exitBackgroundPlayback() {
-  if (switchingMode) return;
-  switchingMode = true;
-
-  try {
-    const store = usePlayerStore.getState();
-    if (!store.currentTrack || !store.isPlaying) return;
-
-    if (isBackgroundAudioActive()) {
-      const time = stopBackgroundAudio();
-      store.setLastKnownTime(time);
-      store.setCurrentTime(time);
-
-      if (playerController.isReady()) {
-        setSuppressYtEvents(700);
-        playerController.seekTo(time);
-        playerController.play();
-        loadedVideoId = store.currentTrack.videoId;
-      }
-      return;
-    }
-
-    forceBackgroundResume();
-  } finally {
-    switchingMode = false;
-  }
-}
-
 function nudgeEngine() {
   const { isPlaying, isReady } = usePlayerStore.getState();
-  if (!isPlaying || !isReady) return;
-
-  if (isBackgroundAudioActive()) {
-    void resumeBackgroundAudio();
-    snapshotMediaSession();
-    return;
-  }
-
-  if (!playerController.isReady()) return;
+  if (!isPlaying || !isReady || !playerController.isReady()) return;
 
   const ytState = playerController.getPlayerState();
   if (ytState === YT_PLAYER_STATE.PLAYING || ytState === YT_PLAYER_STATE.BUFFERING) {
@@ -177,7 +104,7 @@ function nudgeEngine() {
   stalledTicks += 1;
 
   if (isDocumentHidden() && stalledTicks >= 2) {
-    void enterBackgroundPlayback();
+    forceBackgroundResume();
     return;
   }
 
@@ -188,7 +115,6 @@ function nudgeEngine() {
 
 export function onPlaybackStarted(track: MusicTrack) {
   holdMediaSession(track);
-  prefetchBackgroundStream(track.videoId);
   startAudioKeepalive();
   acquirePlaybackLock();
   void acquireWakeLock();
@@ -196,9 +122,6 @@ export function onPlaybackStarted(track: MusicTrack) {
 }
 
 export function onPlaybackStopped() {
-  if (isBackgroundAudioActive()) {
-    stopBackgroundAudio();
-  }
   stopAudioKeepalive();
   releasePlaybackLock();
   void releaseWakeLock();
@@ -227,12 +150,9 @@ function startBackgroundMonitor() {
 
     if (!isPlaying) return;
 
-    if (!isBackgroundAudioActive()) {
-      startAudioKeepalive();
-    }
-
+    startAudioKeepalive();
     nudgeEngine();
-  }, isDocumentHidden() ? 500 : 1000);
+  }, isDocumentHidden() ? 250 : 500);
 }
 
 function stopBackgroundMonitor() {
@@ -243,34 +163,17 @@ function stopBackgroundMonitor() {
 
 export function handleVisibilityChange() {
   const { currentTrack, isPlaying, isReady } = usePlayerStore.getState();
-  if (!currentTrack || !isReady) return;
+  if (!currentTrack || !isReady || !playerController.isReady()) return;
 
   if (document.visibilityState === "hidden" && isPlaying) {
-    void enterBackgroundPlayback();
+    startAudioKeepalive();
+    snapshotMediaSession();
+    forceBackgroundResume();
     return;
   }
 
   if (document.visibilityState === "visible" && isPlaying) {
-    void exitBackgroundPlayback();
+    forceBackgroundResume();
     void acquireWakeLock();
   }
-}
-
-export function initBackgroundTrackWatch() {
-  return usePlayerStore.subscribe((state, prev) => {
-    if (!isDocumentHidden() || !state.isPlaying || !state.currentTrack) return;
-
-    const trackChanged = state.currentTrack.videoId !== prev.currentTrack?.videoId;
-    const started = state.isPlaying && !prev.isPlaying;
-    const stopped = !state.isPlaying && prev.isPlaying;
-
-    if (trackChanged || started) {
-      void startBackgroundAudio(state.currentTrack.videoId, state.lastKnownTime);
-      return;
-    }
-
-    if (stopped) {
-      pauseBackgroundAudio();
-    }
-  });
 }

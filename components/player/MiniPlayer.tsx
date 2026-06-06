@@ -8,10 +8,7 @@ import { MOBILE_FOOTER_OFFSET } from "@/components/shell/MobileNavMenu";
 import { PlayerControls } from "@/components/player/PlayerControls";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import {
-  resetLoadedVideo,
-  teardownPlayerSession,
-} from "@/lib/player/background-playback";
+import { releaseMediaSession } from "@/lib/media-session";
 import { usePlayerStore } from "@/store/player-store";
 
 function routeHasMobileFooter(pathname: string) {
@@ -61,8 +58,7 @@ export function MiniPlayer() {
             className="shrink-0 text-muted-foreground hover:text-foreground"
             onClick={() => {
               clearPlayer();
-              resetLoadedVideo();
-              teardownPlayerSession();
+              releaseMediaSession();
             }}
             aria-label="Close player"
           >

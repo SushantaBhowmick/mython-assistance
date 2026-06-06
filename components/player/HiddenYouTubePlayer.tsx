@@ -3,20 +3,6 @@
 import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
-import {
-  isBackgroundAudioActive,
-  startBackgroundAudio,
-  resumeBackgroundAudio,
-} from "@/lib/player/background-audio-engine";
-import {
-  forceBackgroundResume,
-  getLoadedVideoId,
-  onPlaybackStarted,
-  onPlaybackStopped,
-  setLoadedVideoId,
-  snapshotMediaSession,
-} from "@/lib/player/background-playback";
-import { enginePlay, isYtEventsSuppressed, setSuppressYtEvents } from "@/lib/player/engine-sync";
 import { playerController } from "@/lib/player/player-controller";
 import {
   loadYouTubeIframeApi,
@@ -27,6 +13,7 @@ import {
 import { usePlayerStore } from "@/store/player-store";
 
 let playerInitPromise: Promise<void> | null = null;
+const suppressYtEventsRef = { current: false };
 
 function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
   if (playerInitPromise) return playerInitPromise;
@@ -37,8 +24,8 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
     if (playerController.isReady()) return;
 
     new window.YT.Player(container, {
-      height: "200",
-      width: "200",
+      height: "0",
+      width: "0",
       playerVars: {
         autoplay: 0,
         controls: 0,
@@ -47,7 +34,6 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
         modestbranding: 1,
         rel: 0,
         playsinline: 1,
-        iv_load_policy: 3,
       },
       events: {
         onReady: (event: { target: YTPlayer }) => {
@@ -57,63 +43,26 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           const store = usePlayerStore.getState();
           event.target.setVolume(store.volume);
           if (store.muted) event.target.mute();
-
-          if (store.currentTrack && store.isPlaying) {
-            enginePlay(store.currentTrack, store.lastKnownTime);
-            onPlaybackStarted(store.currentTrack);
-            setLoadedVideoId(store.currentTrack.videoId);
-          }
         },
         onStateChange: (event: { data: number }) => {
-          if (isYtEventsSuppressed()) return;
+          if (suppressYtEventsRef.current) return;
 
           const mapped = mapYtStateToPlayerState(event.data);
           usePlayerStore.getState().setPlayerState(mapped);
 
           if (event.data === YT_PLAYER_STATE.ENDED) {
             usePlayerStore.getState().next();
-            window.setTimeout(() => {
-              const { currentTrack, isPlaying } = usePlayerStore.getState();
-              if (currentTrack && isPlaying) {
-                enginePlay(currentTrack, 0);
-                setLoadedVideoId(currentTrack.videoId);
-              }
-            }, 0);
             return;
           }
 
           const store = usePlayerStore.getState();
 
-          if (event.data === YT_PLAYER_STATE.PLAYING) {
-            if (!store.isPlaying) {
-              usePlayerStore.setState({ isPlaying: true });
-            }
-            snapshotMediaSession();
-            return;
+          if (event.data === YT_PLAYER_STATE.PLAYING && !store.isPlaying) {
+            usePlayerStore.setState({ isPlaying: true });
           }
 
           if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
-            if (document.visibilityState === "hidden") {
-              snapshotMediaSession();
-              void (async () => {
-                if (isBackgroundAudioActive()) {
-                  await resumeBackgroundAudio();
-                  return;
-                }
-                const track = store.currentTrack;
-                if (!track) return;
-                const ok = await startBackgroundAudio(track.videoId, store.lastKnownTime);
-                if (!ok) {
-                  forceBackgroundResume();
-                  window.setTimeout(() => forceBackgroundResume(), 300);
-                }
-              })();
-              return;
-            }
-
-            snapshotMediaSession();
-            setSuppressYtEvents(250);
-            playerController.play();
+            usePlayerStore.setState({ isPlaying: false });
           }
         },
       },
@@ -125,6 +74,7 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
 
 export function HiddenYouTubePlayer() {
   const mountRef = useRef<HTMLDivElement>(null);
+  const loadedVideoIdRef = useRef<string | null>(null);
   const lastRecordedRef = useRef<string | null>(null);
   const prevIsPlayingRef = useRef<boolean | null>(null);
   const initStartedRef = useRef(false);
@@ -152,52 +102,47 @@ export function HiddenYouTubePlayer() {
     if (!isReady || !currentTrack) return;
 
     const videoId = currentTrack.videoId;
-    const { lastKnownTime, isPlaying: shouldPlay } = usePlayerStore.getState();
-    const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
+    if (loadedVideoIdRef.current === videoId) return;
 
-    if (getLoadedVideoId() === videoId) {
-      if (shouldPlay) {
-        setSuppressYtEvents(400);
-        playerController.play();
-        onPlaybackStarted(currentTrack);
-        prevIsPlayingRef.current = true;
-      }
-      return;
-    }
-
-    setLoadedVideoId(videoId);
+    loadedVideoIdRef.current = videoId;
     lastRecordedRef.current = null;
     prevIsPlayingRef.current = null;
 
-    setSuppressYtEvents(800);
+    const { lastKnownTime, isPlaying: shouldPlay } = usePlayerStore.getState();
+    const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
+
+    suppressYtEventsRef.current = true;
 
     if (shouldPlay) {
       playerController.loadVideo(videoId, startAt);
-      onPlaybackStarted(currentTrack);
     } else {
       playerController.cueVideo(videoId, startAt);
       setCurrentTime(startAt);
-      onPlaybackStopped();
     }
+
+    window.setTimeout(() => {
+      suppressYtEventsRef.current = false;
+    }, 300);
   }, [currentTrack, isReady, setCurrentTime]);
 
   useEffect(() => {
     if (!isReady || !currentTrack) return;
-    if (isBackgroundAudioActive()) return;
-    if (getLoadedVideoId() !== currentTrack.videoId) return;
+    if (loadedVideoIdRef.current !== currentTrack.videoId) return;
     if (prevIsPlayingRef.current === isPlaying) return;
 
     prevIsPlayingRef.current = isPlaying;
-    setSuppressYtEvents(400);
+    suppressYtEventsRef.current = true;
 
     if (isPlaying) {
       playerController.play();
-      onPlaybackStarted(currentTrack);
     } else {
       playerController.pause();
-      onPlaybackStopped();
     }
-  }, [currentTrack?.videoId, isPlaying, isReady, currentTrack]);
+
+    window.setTimeout(() => {
+      suppressYtEventsRef.current = false;
+    }, 150);
+  }, [currentTrack?.videoId, isPlaying, isReady]);
 
   useEffect(() => {
     if (!isReady) return;
@@ -240,10 +185,10 @@ export function HiddenYouTubePlayer() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-0 left-0 z-0 h-[200px] w-[200px] overflow-hidden opacity-[0.001]"
+      className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-px w-px overflow-hidden opacity-0"
       aria-hidden
     >
-      <div ref={mountRef} className="h-full w-full" />
+      <div ref={mountRef} />
     </div>
   );
 }

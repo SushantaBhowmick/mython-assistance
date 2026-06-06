@@ -1,12 +1,10 @@
 import type { YTPlayer } from "@/lib/player/youtube-types";
 
 let playerInstance: YTPlayer | null = null;
-let instanceReady = false;
 
 export const playerController = {
   setInstance(player: YTPlayer | null) {
     playerInstance = player;
-    instanceReady = player != null;
   },
 
   getInstance() {
@@ -14,7 +12,7 @@ export const playerController = {
   },
 
   isReady() {
-    return playerInstance != null && instanceReady;
+    return playerInstance != null;
   },
 
   play() {
@@ -75,12 +73,7 @@ export const playerController = {
   },
 
   destroy() {
-    instanceReady = false;
-    try {
-      playerInstance?.destroy();
-    } catch {
-      // iframe may already be detached after navigation or HMR
-    }
+    playerInstance?.destroy();
     playerInstance = null;
   },
 };

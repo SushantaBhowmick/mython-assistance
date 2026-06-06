@@ -1,8 +1,3 @@
-import {
-  isBackgroundAudioActive,
-  pauseBackgroundAudio,
-  resumeBackgroundAudio,
-} from "@/lib/player/background-audio-engine";
 import { playerController } from "@/lib/player/player-controller";
 import { YT_PLAYER_STATE } from "@/lib/player/youtube-types";
 import { usePlayerStore } from "@/store/player-store";
@@ -27,10 +22,6 @@ export function syncEngineToStore() {
   if (!currentTrack || !isReady || !playerController.isReady()) return;
 
   if (isPlaying) {
-    if (isBackgroundAudioActive()) {
-      void resumeBackgroundAudio();
-      return;
-    }
     const ytState = playerController.getPlayerState();
     if (
       ytState === YT_PLAYER_STATE.PLAYING ||
@@ -40,8 +31,6 @@ export function syncEngineToStore() {
     }
     setSuppressYtEvents(300);
     playerController.play();
-  } else if (isBackgroundAudioActive()) {
-    pauseBackgroundAudio();
   } else {
     playerController.pause();
   }
@@ -57,10 +46,6 @@ export function enginePlay(track?: MusicTrack | null, startAt = 0) {
 }
 
 export function enginePause() {
-  if (isBackgroundAudioActive()) {
-    pauseBackgroundAudio();
-    return;
-  }
   if (!playerController.isReady()) return;
   setSuppressYtEvents(200);
   playerController.pause();
@@ -81,10 +66,6 @@ export function engineResume() {
   window.setTimeout(() => {
     const { currentTrack, lastKnownTime } = usePlayerStore.getState();
     if (!currentTrack) return;
-    if (isBackgroundAudioActive()) {
-      void resumeBackgroundAudio();
-      return;
-    }
     enginePlay(currentTrack, lastKnownTime > 0 ? lastKnownTime : 0);
   }, 0);
 }

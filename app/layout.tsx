@@ -67,11 +67,11 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col safe-top safe-bottom">
         <ThemeProvider>
           <PWAProvider>
-            <SupabaseAuthProvider>
-              <CommandPaletteProvider>
-                <GlobalPlayerProvider>{children}</GlobalPlayerProvider>
-              </CommandPaletteProvider>
-            </SupabaseAuthProvider>
+            <GlobalPlayerProvider>
+              <SupabaseAuthProvider>
+                <CommandPaletteProvider>{children}</CommandPaletteProvider>
+              </SupabaseAuthProvider>
+            </GlobalPlayerProvider>
           </PWAProvider>
           <Toaster richColors closeButton />
         </ThemeProvider>
