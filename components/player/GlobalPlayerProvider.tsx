@@ -7,6 +7,7 @@ import { MiniPlayer } from "@/components/player/MiniPlayer";
 import { registerMediaSessionActions } from "@/lib/media-session";
 import {
   applyPlaybackIntent,
+  forceEngineResume,
   initPlaybackLifecycleListeners,
   initPlayerEngineSubscription,
 } from "@/lib/player/player-engine";
@@ -16,7 +17,7 @@ function bindMediaSessionHandlers() {
   registerMediaSessionActions({
     onPlay: () => {
       usePlayerStore.getState().resume();
-      applyPlaybackIntent();
+      forceEngineResume();
     },
     onPause: () => {
       usePlayerStore.getState().pause();
@@ -24,11 +25,11 @@ function bindMediaSessionHandlers() {
     },
     onPrevious: () => {
       usePlayerStore.getState().previous();
-      applyPlaybackIntent();
+      window.setTimeout(() => forceEngineResume(), 50);
     },
     onNext: () => {
       usePlayerStore.getState().next();
-      applyPlaybackIntent();
+      window.setTimeout(() => forceEngineResume(), 50);
     },
     onSeekBackward: () => usePlayerStore.getState().skipBy(-10),
     onSeekForward: () => usePlayerStore.getState().skipBy(10),

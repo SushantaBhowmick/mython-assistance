@@ -23,8 +23,8 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
     if (playerController.isReady()) return;
 
     new window.YT.Player(container, {
-      height: "1",
-      width: "1",
+      height: "200",
+      width: "200",
       playerVars: {
         autoplay: 0,
         controls: 0,
@@ -33,6 +33,7 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
         modestbranding: 1,
         rel: 0,
         playsinline: 1,
+        iv_load_policy: 3,
       },
       events: {
         onReady: (event: { target: YTPlayer }) => {
@@ -119,10 +120,10 @@ export function HiddenYouTubePlayer() {
 
   return (
     <div
-      className="pointer-events-none fixed -left-[9999px] top-0 z-0 h-px w-px overflow-hidden opacity-0"
+      className="pointer-events-none fixed bottom-0 left-0 z-0 h-[200px] w-[200px] overflow-hidden opacity-[0.001]"
       aria-hidden
     >
-      <div ref={mountRef} className="h-px w-px" />
+      <div ref={mountRef} className="h-full w-full" />
     </div>
   );
 }
