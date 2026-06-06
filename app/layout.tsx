@@ -52,7 +52,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
   colorScheme: "dark light",
 };
-
+console.log("Version 1.0.5")
 export default function RootLayout({
   children,
 }: Readonly<{
