@@ -38,27 +38,6 @@ async function parseJson<T>(response: Response): Promise<T> {
 }
 
 let searchInFlight = new Map<string, Promise<YouTubeSearchResponse>>();
-const streamInFlight = new Map<string, Promise<{ url: string; expiresAt: number }>>();
-
-export async function fetchStreamUrl(videoId: string) {
-  const cached = streamInFlight.get(videoId);
-  if (cached) return cached;
-
-  const promise = (async () => {
-    const response = await fetch(`/api/youtube/stream?videoId=${encodeURIComponent(videoId)}`, {
-      cache: "no-store",
-    });
-    return parseJson<{ url: string; expiresAt: number }>(response);
-  })();
-
-  streamInFlight.set(videoId, promise);
-
-  try {
-    return await promise;
-  } finally {
-    streamInFlight.delete(videoId);
-  }
-}
 
 export async function searchMusic(
   query: string,

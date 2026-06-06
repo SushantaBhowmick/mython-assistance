@@ -18,12 +18,14 @@ export async function GET(request: Request) {
       return Response.json({ error: "Invalid video id" }, { status: 400 });
     }
 
-    const url = await resolveYouTubeAudioStream(parsed.data.videoId);
+    const { videoId } = parsed.data;
+    await resolveYouTubeAudioStream(videoId);
 
+    // Proxy URL — googlevideo links are IP-bound to the server that resolved them.
     return jsonOk({
-      url,
-      // Stream URLs expire; client should refresh on playback errors.
-      expiresAt: Date.now() + 5 * 60 * 60 * 1000,
+      url: `/api/youtube/play?videoId=${encodeURIComponent(videoId)}`,
+      mimeType: "audio/mp4",
+      expiresAt: Date.now() + 4 * 60 * 60 * 1000,
     });
   } catch (error) {
     return handleRouteError(error, "[youtube/stream]");

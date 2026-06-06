@@ -1,15 +1,19 @@
 import "server-only";
 
+import { ClientType, Innertube } from "youtubei.js";
+
+import { AppError } from "@/lib/errors/app-error";
+
 const PIPED_INSTANCES = [
-  "https://pipedapi.kavin.rocks",
   "https://api.piped.private.coffee",
-  "https://pipedapi.adminforge.de",
+  "https://pipedapi.leptons.xyz",
+  "https://pipedapi.nosebs.ru",
+  "https://api.piped.yt",
 ];
 
 const INVIDIOUS_INSTANCES = [
-  "https://yewtu.be",
-  "https://invidious.fdn.fr",
   "https://inv.nadeko.net",
+  "https://vid.puffyan.us",
 ];
 
 type PipedStreamResponse = {
@@ -28,16 +32,38 @@ type InvidiousVideoResponse = {
   }>;
 };
 
-const RESOLVE_TIMEOUT_MS = 12_000;
+const RESOLVE_TIMEOUT_MS = 15_000;
+const STREAM_CACHE_TTL_MS = 4 * 60 * 60 * 1000;
 
-async function fetchWithTimeout(url: string) {
+type CachedStream = {
+  url: string;
+  mimeType: string;
+  expiresAt: number;
+};
+
+const streamCache = new Map<string, CachedStream>();
+
+let innertubePromise: Promise<Innertube> | null = null;
+
+async function getInnertube() {
+  if (!innertubePromise) {
+    innertubePromise = Innertube.create({
+      client_type: ClientType.IOS,
+      generate_session_locally: true,
+      retrieve_player: true,
+    });
+  }
+  return innertubePromise;
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), RESOLVE_TIMEOUT_MS);
 
   try {
     return await fetch(url, {
+      ...init,
       signal: controller.signal,
-      headers: { Accept: "application/json" },
       cache: "no-store",
     });
   } finally {
@@ -50,17 +76,39 @@ function pickBestAudioUrl(streams: Array<{ url: string; mimeType?: string; bitra
   const ranked = (audio.length > 0 ? audio : streams).slice().sort((a, b) => {
     return (b.bitrate ?? 0) - (a.bitrate ?? 0);
   });
-  return ranked[0]?.url ?? null;
+  return ranked[0] ?? null;
+}
+
+async function resolveFromYoutubei(videoId: string) {
+  const yt = await getInnertube();
+  const info = await yt.getBasicInfo(videoId);
+  const format = info.chooseFormat({
+    type: "audio",
+    quality: "best",
+    client: "IOS",
+  });
+
+  if (!format) return null;
+
+  const url = await format.decipher(yt.session.player);
+  if (!url || typeof url !== "string") return null;
+
+  return {
+    url,
+    mimeType: format.mime_type ?? "audio/mp4",
+  };
 }
 
 async function resolveFromPiped(videoId: string) {
   for (const instance of PIPED_INSTANCES) {
     try {
-      const response = await fetchWithTimeout(`${instance}/streams/${videoId}`);
+      const response = await fetchWithTimeout(`${instance}/streams/${videoId}`, {
+        headers: { Accept: "application/json" },
+      });
       if (!response.ok) continue;
 
       const data = (await response.json()) as PipedStreamResponse;
-      const url = pickBestAudioUrl(
+      const picked = pickBestAudioUrl(
         (data.audioStreams ?? []).map((stream) => ({
           url: stream.url,
           mimeType: stream.mimeType,
@@ -68,7 +116,12 @@ async function resolveFromPiped(videoId: string) {
         })),
       );
 
-      if (url) return url;
+      if (picked?.url) {
+        return {
+          url: picked.url,
+          mimeType: picked.mimeType ?? "audio/mp4",
+        };
+      }
     } catch {
       // Try next instance.
     }
@@ -80,11 +133,13 @@ async function resolveFromPiped(videoId: string) {
 async function resolveFromInvidious(videoId: string) {
   for (const instance of INVIDIOUS_INSTANCES) {
     try {
-      const response = await fetchWithTimeout(`${instance}/api/v1/videos/${videoId}`);
+      const response = await fetchWithTimeout(`${instance}/api/v1/videos/${videoId}`, {
+        headers: { Accept: "application/json" },
+      });
       if (!response.ok) continue;
 
       const data = (await response.json()) as InvidiousVideoResponse;
-      const url = pickBestAudioUrl(
+      const picked = pickBestAudioUrl(
         (data.adaptiveFormats ?? [])
           .filter((format) => format.url)
           .map((format) => ({
@@ -94,7 +149,12 @@ async function resolveFromInvidious(videoId: string) {
           })),
       );
 
-      if (url) return url;
+      if (picked?.url) {
+        return {
+          url: picked.url,
+          mimeType: picked.mimeType ?? "audio/mp4",
+        };
+      }
     } catch {
       // Try next instance.
     }
@@ -103,13 +163,47 @@ async function resolveFromInvidious(videoId: string) {
   return null;
 }
 
-/** Resolve a browser-playable audio URL for a YouTube video (Spotify-style direct stream). */
+export function getCachedUpstreamStream(videoId: string) {
+  const cached = streamCache.get(videoId);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    streamCache.delete(videoId);
+    return null;
+  }
+  return cached;
+}
+
+export function clearCachedUpstreamStream(videoId: string) {
+  streamCache.delete(videoId);
+}
+
+/** Resolve upstream audio URL. Cached server-side for proxy playback. */
 export async function resolveYouTubeAudioStream(videoId: string) {
-  const pipedUrl = await resolveFromPiped(videoId);
-  if (pipedUrl) return pipedUrl;
+  const cached = getCachedUpstreamStream(videoId);
+  if (cached) return cached;
 
-  const invidiousUrl = await resolveFromInvidious(videoId);
-  if (invidiousUrl) return invidiousUrl;
+  const resolvers = [resolveFromYoutubei, resolveFromPiped, resolveFromInvidious];
 
-  throw new Error("Could not resolve an audio stream for this video");
+  for (const resolve of resolvers) {
+    try {
+      const resolved = await resolve(videoId);
+      if (!resolved?.url) continue;
+
+      const entry: CachedStream = {
+        url: resolved.url,
+        mimeType: resolved.mimeType,
+        expiresAt: Date.now() + STREAM_CACHE_TTL_MS,
+      };
+      streamCache.set(videoId, entry);
+      return entry;
+    } catch (error) {
+      console.warn("[youtube/stream-resolve]", resolve.name, videoId, error);
+    }
+  }
+
+  throw new AppError(
+    "Could not resolve an audio stream for this video",
+    502,
+    "STREAM_UNAVAILABLE",
+  );
 }
