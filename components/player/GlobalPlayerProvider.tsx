@@ -4,13 +4,12 @@ import { useEffect } from "react";
 
 import { HiddenYouTubePlayer } from "@/components/player/HiddenYouTubePlayer";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
+import { registerMediaSessionActions } from "@/lib/media-session";
 import {
-  registerMediaSessionActions,
-  updateMediaSessionMetadata,
-  updateMediaSessionPlaybackState,
-  updateMediaSessionPositionState,
-} from "@/lib/media-session";
-import { applyPlaybackIntent, initPlayerEngineSubscription } from "@/lib/player/player-engine";
+  applyPlaybackIntent,
+  initPlaybackLifecycleListeners,
+  initPlayerEngineSubscription,
+} from "@/lib/player/player-engine";
 import { usePlayerStore } from "@/store/player-store";
 
 function bindMediaSessionHandlers() {
@@ -38,23 +37,16 @@ function bindMediaSessionHandlers() {
 }
 
 export function GlobalPlayerProvider({ children }: { children: React.ReactNode }) {
-  const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const isPlaying = usePlayerStore((s) => s.isPlaying);
-  const duration = usePlayerStore((s) => s.duration);
-  const currentTime = usePlayerStore((s) => s.currentTime);
-
   useEffect(() => {
     bindMediaSessionHandlers();
-    return initPlayerEngineSubscription();
+    const unsubStore = initPlayerEngineSubscription();
+    const unsubLifecycle = initPlaybackLifecycleListeners();
+
+    return () => {
+      unsubStore();
+      unsubLifecycle();
+    };
   }, []);
-
-  useEffect(() => {
-    if (!currentTrack) return;
-    updateMediaSessionMetadata(currentTrack);
-    bindMediaSessionHandlers();
-    updateMediaSessionPlaybackState(isPlaying);
-    updateMediaSessionPositionState(duration, currentTime);
-  }, [currentTrack?.videoId, isPlaying, duration, currentTime]);
 
   return (
     <>

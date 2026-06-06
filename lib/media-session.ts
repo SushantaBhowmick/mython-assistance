@@ -98,7 +98,7 @@ export function releaseMediaSession() {
   sessionHeld = false;
   navigator.mediaSession.metadata = null;
   navigator.mediaSession.playbackState = "none";
-  clearMediaSessionActions();
+  // Keep action handlers registered so the next track can use lock-screen controls immediately.
 }
 
 export function updateMediaSessionMetadata(track: MusicTrack | null) {

@@ -4,6 +4,7 @@ import {
   releaseMediaSession,
   updateMediaSessionPlaybackState,
 } from "@/lib/media-session";
+import { startAudioKeepalive, stopAudioKeepalive } from "@/lib/player/audio-keepalive";
 import { playerController } from "@/lib/player/player-controller";
 import { YT_PLAYER_STATE } from "@/lib/player/youtube-types";
 import { usePlayerStore } from "@/store/player-store";
@@ -11,6 +12,7 @@ import { usePlayerStore } from "@/store/player-store";
 let loadedVideoId: string | null = null;
 let suppressYtEvents = false;
 let keepaliveTimer: number | null = null;
+let wakeLock: WakeLockSentinel | null = null;
 
 export function setSuppressYtEvents(ms = 400) {
   suppressYtEvents = true;
@@ -21,6 +23,35 @@ export function setSuppressYtEvents(ms = 400) {
 
 export function isDocumentHidden() {
   return typeof document !== "undefined" && document.visibilityState === "hidden";
+}
+
+async function acquireWakeLock() {
+  if (!("wakeLock" in navigator)) return;
+  try {
+    if (!wakeLock) {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => {
+        wakeLock = null;
+      });
+    }
+  } catch {
+    // Denied or unsupported — non-fatal.
+  }
+}
+
+async function releaseWakeLock() {
+  try {
+    await wakeLock?.release();
+  } catch {
+    // ignore
+  }
+  wakeLock = null;
+}
+
+function snapshotNow() {
+  const { currentTrack, isPlaying, duration, currentTime } = usePlayerStore.getState();
+  if (!currentTrack) return;
+  persistMediaSessionSnapshot(currentTrack, isPlaying, duration, currentTime);
 }
 
 /** Single entry point — all play/pause/track changes go through here. */
@@ -38,7 +69,15 @@ export function applyPlaybackIntent() {
     startSessionKeepalive();
   }
 
-  persistMediaSessionSnapshot(currentTrack, isPlaying, duration, currentTime);
+  snapshotNow();
+
+  if (isPlaying) {
+    startAudioKeepalive();
+    void acquireWakeLock();
+  } else {
+    stopAudioKeepalive();
+    void releaseWakeLock();
+  }
 
   if (!isReady || !playerController.isReady()) return;
 
@@ -73,48 +112,34 @@ export function handleYtStateChange(state: number) {
 
   if (state === YT_PLAYER_STATE.ENDED) {
     usePlayerStore.getState().next();
-    applyPlaybackIntent();
+    window.setTimeout(() => applyPlaybackIntent(), 0);
     return;
   }
 
   if (state === YT_PLAYER_STATE.PLAYING && !store.isPlaying) {
     usePlayerStore.setState({ isPlaying: true });
-    persistMediaSessionSnapshot(
-      store.currentTrack,
-      true,
-      store.duration,
-      store.currentTime,
-    );
+    snapshotNow();
     return;
   }
 
   if (state === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
-    // OS backgrounded the app — keep notification + user intent, retry playback.
+    // OS backgrounded the app — keep user intent + notification, force resume.
     if (isDocumentHidden()) {
-      persistMediaSessionSnapshot(
-        store.currentTrack,
-        true,
-        store.duration,
-        store.currentTime,
-      );
-      window.setTimeout(() => applyPlaybackIntent(), 50);
+      snapshotNow();
+      applyPlaybackIntent();
+      window.setTimeout(() => applyPlaybackIntent(), 100);
+      window.setTimeout(() => applyPlaybackIntent(), 400);
       return;
     }
 
-    // Foreground: only accept pause if user tapped pause in the app/notification.
-    // YouTube can spuriously pause during load — nudge resume once.
-    persistMediaSessionSnapshot(
-      store.currentTrack,
-      true,
-      store.duration,
-      store.currentTime,
-    );
+    // Foreground spurious pause during load — nudge once.
+    snapshotNow();
     window.setTimeout(() => {
       const latest = usePlayerStore.getState();
       if (latest.isPlaying && latest.currentTrack) {
         applyPlaybackIntent();
       }
-    }, 120);
+    }, 150);
   }
 }
 
@@ -126,15 +151,14 @@ function startSessionKeepalive() {
   if (keepaliveTimer) return;
 
   keepaliveTimer = window.setInterval(() => {
-    const { currentTrack, isPlaying, isReady, duration, currentTime } =
-      usePlayerStore.getState();
+    const { currentTrack, isPlaying, isReady } = usePlayerStore.getState();
 
     if (!currentTrack) {
       teardownPlayerSession();
       return;
     }
 
-    persistMediaSessionSnapshot(currentTrack, isPlaying, duration, currentTime);
+    snapshotNow();
 
     if (!isPlaying || !isReady || !playerController.isReady()) return;
 
@@ -147,7 +171,7 @@ function startSessionKeepalive() {
       playerController.play();
       updateMediaSessionPlaybackState(true);
     }
-  }, 1000);
+  }, 500);
 }
 
 export function teardownPlayerSession() {
@@ -156,6 +180,8 @@ export function teardownPlayerSession() {
     keepaliveTimer = null;
   }
   loadedVideoId = null;
+  stopAudioKeepalive();
+  void releaseWakeLock();
   releaseMediaSession();
 }
 
@@ -183,4 +209,35 @@ export function initPlayerEngineSubscription() {
 
 export function resetLoadedVideo() {
   loadedVideoId = null;
+}
+
+/** Call on visibility / focus changes — works when React is throttled in background. */
+export function handlePlaybackLifecycleEvent() {
+  const { currentTrack, isPlaying } = usePlayerStore.getState();
+  if (!currentTrack) return;
+
+  if (document.visibilityState === "hidden" && isPlaying) {
+    snapshotNow();
+    applyPlaybackIntent();
+    return;
+  }
+
+  if (document.visibilityState === "visible") {
+    applyPlaybackIntent();
+    void acquireWakeLock();
+  }
+}
+
+export function initPlaybackLifecycleListeners() {
+  const onLifecycle = () => handlePlaybackLifecycleEvent();
+
+  document.addEventListener("visibilitychange", onLifecycle);
+  window.addEventListener("focus", onLifecycle);
+  window.addEventListener("pageshow", onLifecycle);
+
+  return () => {
+    document.removeEventListener("visibilitychange", onLifecycle);
+    window.removeEventListener("focus", onLifecycle);
+    window.removeEventListener("pageshow", onLifecycle);
+  };
 }
