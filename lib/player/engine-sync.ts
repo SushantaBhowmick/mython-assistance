@@ -23,10 +23,7 @@ export function syncEngineToStore() {
 
   if (isPlaying) {
     const ytState = playerController.getPlayerState();
-    if (
-      ytState === YT_PLAYER_STATE.PLAYING ||
-      ytState === YT_PLAYER_STATE.BUFFERING
-    ) {
+    if (ytState === YT_PLAYER_STATE.PLAYING) {
       return;
     }
     setSuppressYtEvents(300);
@@ -40,9 +37,14 @@ export function enginePlay(track?: MusicTrack | null, startAt = 0) {
   const resolved = track ?? usePlayerStore.getState().currentTrack;
   if (!resolved || !playerController.isReady()) return;
 
-  setSuppressYtEvents(500);
-  playerController.loadVideo(resolved.videoId, startAt);
-  playerController.play();
+  if (playerController.getLoadedVideoId() === resolved.videoId) {
+    if (startAt > 0) playerController.seekTo(startAt);
+    setSuppressYtEvents(300);
+    playerController.play();
+    return;
+  }
+
+  usePlayerStore.getState().playTrack(resolved, undefined, startAt);
 }
 
 export function enginePause() {

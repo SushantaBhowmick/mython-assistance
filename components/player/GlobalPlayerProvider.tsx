@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 
-import { HiddenYouTubePlayer } from "@/components/player/HiddenYouTubePlayer";
+import { HiddenAudioPlayer } from "@/components/player/HiddenAudioPlayer";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
 import {
   registerMediaSessionActions,
@@ -17,7 +17,6 @@ import {
 import {
   engineNext,
   enginePauseStore,
-  enginePlay,
   enginePrevious,
   engineResume,
 } from "@/lib/player/engine-sync";
@@ -48,17 +47,10 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
       if (!state.hasHydrated) return;
       if (!playerController.isReady() || !state.currentTrack) return;
 
-      const videoChanged = state.currentTrack.videoId !== prev.currentTrack?.videoId;
       const started = state.isPlaying && !prev.isPlaying;
       const stopped = !state.isPlaying && prev.isPlaying;
 
-      if (videoChanged && state.isPlaying) {
-        enginePlay(
-          state.currentTrack,
-          state.lastKnownTime > 0 ? state.lastKnownTime : 0,
-        );
-        onPlaybackStarted(state.currentTrack);
-      } else if (started) {
+      if (started) {
         playerController.play();
         onPlaybackStarted(state.currentTrack);
       } else if (stopped) {
@@ -83,7 +75,7 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
   return (
     <>
       {children}
-      <HiddenYouTubePlayer />
+      <HiddenAudioPlayer />
       <MiniPlayer />
     </>
   );
