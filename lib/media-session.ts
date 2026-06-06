@@ -11,9 +11,14 @@ type MediaSessionHandlers = {
 };
 
 let handlers: MediaSessionHandlers | null = null;
+let sessionHeld = false;
 
 export function isMediaSessionSupported() {
   return typeof navigator !== "undefined" && "mediaSession" in navigator;
+}
+
+export function isMediaSessionHeld() {
+  return sessionHeld;
 }
 
 export function registerMediaSessionActions(nextHandlers: MediaSessionHandlers) {
@@ -28,19 +33,19 @@ export function registerMediaSessionActions(nextHandlers: MediaSessionHandlers) 
       handlers?.onPrevious(),
     );
     navigator.mediaSession.setActionHandler("nexttrack", () => handlers?.onNext());
+    navigator.mediaSession.setActionHandler("seekbackward", () =>
+      handlers?.onSeekBackward(),
+    );
+    navigator.mediaSession.setActionHandler("seekforward", () =>
+      handlers?.onSeekForward(),
+    );
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (details.seekTime == null) return;
+      handlers?.onSeekTo(details.seekTime);
+    });
   } catch {
     // Some browsers reject handlers until media is playing.
   }
-  navigator.mediaSession.setActionHandler("seekbackward", () =>
-    handlers?.onSeekBackward(),
-  );
-  navigator.mediaSession.setActionHandler("seekforward", () =>
-    handlers?.onSeekForward(),
-  );
-  navigator.mediaSession.setActionHandler("seekto", (details) => {
-    if (details.seekTime == null) return;
-    handlers?.onSeekTo(details.seekTime);
-  });
 }
 
 export function clearMediaSessionActions() {
@@ -67,28 +72,56 @@ export function clearMediaSessionActions() {
   handlers = null;
 }
 
-export function updateMediaSessionMetadata(track: MusicTrack | null) {
+/** Lock the system media notification until the user closes the player. */
+export function holdMediaSession(track: MusicTrack) {
   if (!isMediaSessionSupported()) return;
 
-  if (!track) {
-    navigator.mediaSession.metadata = null;
-    return;
-  }
-
+  sessionHeld = true;
   navigator.mediaSession.metadata = new MediaMetadata({
     title: track.title,
     artist: track.channelTitle,
-    album: "YouTube",
+    album: "Mython",
     artwork: track.thumbnailUrl
       ? [
+          { src: track.thumbnailUrl, sizes: "96x96", type: "image/jpeg" },
           { src: track.thumbnailUrl, sizes: "512x512", type: "image/jpeg" },
         ]
       : [],
   });
+  navigator.mediaSession.playbackState = "playing";
+}
+
+/** Only called when user closes the player — clears the notification bar. */
+export function releaseMediaSession() {
+  if (!isMediaSessionSupported()) return;
+
+  sessionHeld = false;
+  navigator.mediaSession.metadata = null;
+  navigator.mediaSession.playbackState = "none";
+  clearMediaSessionActions();
+}
+
+export function updateMediaSessionMetadata(track: MusicTrack | null) {
+  if (!isMediaSessionSupported()) return;
+  if (!track) return;
+  if (!sessionHeld) holdMediaSession(track);
+  else {
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.title,
+      artist: track.channelTitle,
+      album: "Mython",
+      artwork: track.thumbnailUrl
+        ? [
+            { src: track.thumbnailUrl, sizes: "96x96", type: "image/jpeg" },
+            { src: track.thumbnailUrl, sizes: "512x512", type: "image/jpeg" },
+          ]
+        : [],
+    });
+  }
 }
 
 export function updateMediaSessionPlaybackState(isPlaying: boolean) {
-  if (!isMediaSessionSupported()) return;
+  if (!isMediaSessionSupported() || !sessionHeld) return;
   navigator.mediaSession.playbackState = isPlaying ? "playing" : "paused";
 }
 
@@ -97,7 +130,7 @@ export function updateMediaSessionPositionState(
   currentTime: number,
   playbackRate = 1,
 ) {
-  if (!isMediaSessionSupported()) return;
+  if (!isMediaSessionSupported() || !sessionHeld) return;
   if (!Number.isFinite(duration) || duration <= 0) return;
 
   try {
@@ -109,4 +142,18 @@ export function updateMediaSessionPositionState(
   } catch {
     // Some browsers reject invalid position state during track transitions.
   }
+}
+
+/** Re-assert notification content so Android does not dismiss it in background. */
+export function persistMediaSessionSnapshot(
+  track: MusicTrack | null,
+  isPlaying: boolean,
+  duration: number,
+  currentTime: number,
+) {
+  if (!track || !sessionHeld) return;
+
+  updateMediaSessionMetadata(track);
+  updateMediaSessionPlaybackState(isPlaying);
+  updateMediaSessionPositionState(duration, currentTime);
 }

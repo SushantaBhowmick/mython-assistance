@@ -52,15 +52,9 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     if (!currentTrack) return;
     updateMediaSessionMetadata(currentTrack);
     bindMediaSessionHandlers();
-  }, [currentTrack?.videoId]);
-
-  useEffect(() => {
     updateMediaSessionPlaybackState(isPlaying);
-  }, [isPlaying]);
-
-  useEffect(() => {
     updateMediaSessionPositionState(duration, currentTime);
-  }, [duration, currentTime, isPlaying]);
+  }, [currentTrack?.videoId, isPlaying, duration, currentTime]);
 
   return (
     <>

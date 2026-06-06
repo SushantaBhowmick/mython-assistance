@@ -1,4 +1,7 @@
 import {
+  holdMediaSession,
+  persistMediaSessionSnapshot,
+  releaseMediaSession,
   updateMediaSessionPlaybackState,
 } from "@/lib/media-session";
 import { playerController } from "@/lib/player/player-controller";
@@ -16,28 +19,36 @@ export function setSuppressYtEvents(ms = 400) {
   }, ms);
 }
 
-export function shouldSuppressYtEvent() {
-  return suppressYtEvents;
-}
-
 export function isDocumentHidden() {
   return typeof document !== "undefined" && document.visibilityState === "hidden";
 }
 
 /** Single entry point — all play/pause/track changes go through here. */
 export function applyPlaybackIntent() {
-  const { currentTrack, isPlaying, lastKnownTime, isReady } = usePlayerStore.getState();
-  if (!isReady || !currentTrack || !playerController.isReady()) return;
+  const { currentTrack, isPlaying, lastKnownTime, isReady, duration, currentTime } =
+    usePlayerStore.getState();
+
+  if (!currentTrack) {
+    teardownPlayerSession();
+    return;
+  }
+
+  if (!sessionActive()) {
+    holdMediaSession(currentTrack);
+    startSessionKeepalive();
+  }
+
+  persistMediaSessionSnapshot(currentTrack, isPlaying, duration, currentTime);
+
+  if (!isReady || !playerController.isReady()) return;
 
   if (!isPlaying) {
-    stopBackgroundKeepalive();
     setSuppressYtEvents(200);
     playerController.pause();
     updateMediaSessionPlaybackState(false);
     return;
   }
 
-  startBackgroundKeepalive();
   updateMediaSessionPlaybackState(true);
 
   const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
@@ -58,6 +69,7 @@ export function handleYtStateChange(state: number) {
   if (suppressYtEvents) return;
 
   const store = usePlayerStore.getState();
+  if (!store.currentTrack) return;
 
   if (state === YT_PLAYER_STATE.ENDED) {
     usePlayerStore.getState().next();
@@ -67,27 +79,64 @@ export function handleYtStateChange(state: number) {
 
   if (state === YT_PLAYER_STATE.PLAYING && !store.isPlaying) {
     usePlayerStore.setState({ isPlaying: true });
-    updateMediaSessionPlaybackState(true);
+    persistMediaSessionSnapshot(
+      store.currentTrack,
+      true,
+      store.duration,
+      store.currentTime,
+    );
     return;
   }
 
   if (state === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
-    // Android backgrounds the iframe — do NOT treat as user pause.
+    // OS backgrounded the app — keep notification + user intent, retry playback.
     if (isDocumentHidden()) {
+      persistMediaSessionSnapshot(
+        store.currentTrack,
+        true,
+        store.duration,
+        store.currentTime,
+      );
       window.setTimeout(() => applyPlaybackIntent(), 50);
       return;
     }
-    usePlayerStore.setState({ isPlaying: false });
-    updateMediaSessionPlaybackState(false);
+
+    // Foreground: only accept pause if user tapped pause in the app/notification.
+    // YouTube can spuriously pause during load — nudge resume once.
+    persistMediaSessionSnapshot(
+      store.currentTrack,
+      true,
+      store.duration,
+      store.currentTime,
+    );
+    window.setTimeout(() => {
+      const latest = usePlayerStore.getState();
+      if (latest.isPlaying && latest.currentTrack) {
+        applyPlaybackIntent();
+      }
+    }, 120);
   }
 }
 
-function startBackgroundKeepalive() {
+function sessionActive() {
+  return keepaliveTimer != null;
+}
+
+function startSessionKeepalive() {
   if (keepaliveTimer) return;
 
   keepaliveTimer = window.setInterval(() => {
-    const { isPlaying, currentTrack, isReady } = usePlayerStore.getState();
-    if (!isPlaying || !currentTrack || !isReady || !playerController.isReady()) return;
+    const { currentTrack, isPlaying, isReady, duration, currentTime } =
+      usePlayerStore.getState();
+
+    if (!currentTrack) {
+      teardownPlayerSession();
+      return;
+    }
+
+    persistMediaSessionSnapshot(currentTrack, isPlaying, duration, currentTime);
+
+    if (!isPlaying || !isReady || !playerController.isReady()) return;
 
     const ytState = playerController.getPlayerState();
     if (
@@ -96,20 +145,32 @@ function startBackgroundKeepalive() {
     ) {
       setSuppressYtEvents(200);
       playerController.play();
+      updateMediaSessionPlaybackState(true);
     }
-
-    updateMediaSessionPlaybackState(true);
-  }, 1200);
+  }, 1000);
 }
 
-function stopBackgroundKeepalive() {
-  if (!keepaliveTimer) return;
-  window.clearInterval(keepaliveTimer);
-  keepaliveTimer = null;
+export function teardownPlayerSession() {
+  if (keepaliveTimer) {
+    window.clearInterval(keepaliveTimer);
+    keepaliveTimer = null;
+  }
+  loadedVideoId = null;
+  releaseMediaSession();
 }
 
 export function initPlayerEngineSubscription() {
   return usePlayerStore.subscribe((state, prev) => {
+    if (!state.currentTrack && prev.currentTrack) {
+      teardownPlayerSession();
+      return;
+    }
+
+    if (state.currentTrack && state.currentTrack.videoId !== prev.currentTrack?.videoId) {
+      holdMediaSession(state.currentTrack);
+      if (!keepaliveTimer) startSessionKeepalive();
+    }
+
     const trackChanged = state.currentTrack?.videoId !== prev.currentTrack?.videoId;
     const playChanged = state.isPlaying !== prev.isPlaying;
     const readyChanged = state.isReady !== prev.isReady;
