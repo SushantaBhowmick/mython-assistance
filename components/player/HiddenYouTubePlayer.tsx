@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
+import { shouldIgnoreBackgroundPause } from "@/lib/player/background-playback";
 import { playerController } from "@/lib/player/player-controller";
 import {
   loadYouTubeIframeApi,
@@ -71,7 +72,11 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
             usePlayerStore.setState({ isPlaying: true });
           }
 
-          if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
+          if (
+            event.data === YT_PLAYER_STATE.PAUSED &&
+            store.isPlaying &&
+            !shouldIgnoreBackgroundPause(store.isPlaying, event.data)
+          ) {
             usePlayerStore.setState({ isPlaying: false });
           }
         },
@@ -199,10 +204,10 @@ export function HiddenYouTubePlayer() {
 
   return (
     <div
-      className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-px w-px overflow-hidden opacity-0"
+      className="pointer-events-none fixed bottom-0 right-0 z-0 h-px w-px overflow-hidden opacity-[0.01]"
       aria-hidden
     >
-      <div ref={mountRef} />
+      <div ref={mountRef} className="h-px w-px" />
     </div>
   );
 }

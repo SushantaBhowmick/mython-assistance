@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { MusicHomeDiscoverySkeletons } from "@/components/music/MusicSectionSkeletons";
 import { MusicOnboarding } from "@/components/music/MusicOnboarding";
@@ -23,7 +23,8 @@ import type { MusicTrack, PlaylistSummary, RecommendationItem } from "@/types/mu
 
 export function MusicHomeDiscovery() {
   const currentTrack = usePlayerStore((s) => s.currentTrack);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [degraded, setDegraded] = useState(false);
   const [recent, setRecent] = useState<MusicTrack[]>([]);
@@ -34,18 +35,28 @@ export function MusicHomeDiscovery() {
   const [playlists, setPlaylists] = useState<PlaylistSummary[]>([]);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [discoveries, setDiscoveries] = useState<MusicTrack[]>([]);
+  const hasLoadedRef = useRef(false);
 
-  const loadHome = useCallback(async () => {
-    setLoading(true);
+  const loadHome = useCallback(async (options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+
+    if (background) {
+      setRefreshing(true);
+    } else if (!hasLoadedRef.current) {
+      setInitialLoading(true);
+    }
+
     setError(null);
     setDegraded(false);
+
+    const excludeVideoId = usePlayerStore.getState().currentTrack?.videoId;
 
     const results = await Promise.allSettled([
       getHistory({ sort: "recent", limit: 10 }),
       getHistory({ sort: "most-played", limit: 10 }),
       getFavorites(),
       getPlaylists(),
-      getRecommendations({ limit: 20, exclude: currentTrack?.videoId }),
+      getRecommendations({ limit: 20, exclude: excludeVideoId }),
       getDiscoveries(20),
     ]);
 
@@ -91,12 +102,22 @@ export function MusicHomeDiscovery() {
       setError("Some library sections could not load. Database may be reconnecting — try Refresh.");
     }
 
-    setLoading(false);
-  }, [currentTrack?.videoId]);
+    hasLoadedRef.current = true;
+    setInitialLoading(false);
+    setRefreshing(false);
+  }, []);
 
   useEffect(() => {
-    loadHome();
+    void loadHome();
   }, [loadHome]);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) return;
+
+    getRecommendations({ limit: 20, exclude: currentTrack?.videoId })
+      .then((res) => setRecommendations(res.items))
+      .catch(() => undefined);
+  }, [currentTrack?.videoId]);
 
   const hasLocalData =
     recent.length > 0 ||
@@ -105,6 +126,7 @@ export function MusicHomeDiscovery() {
     mostPlayed.length > 0;
 
   const continueTrack = currentTrack ?? recent[0] ?? null;
+  const showContent = !initialLoading;
 
   return (
     <div className="space-y-8">
@@ -115,28 +137,33 @@ export function MusicHomeDiscovery() {
             Pick up where you left off, replay favorites, and explore recommendations.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={loadHome} disabled={loading}>
-          Refresh
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void loadHome({ background: true })}
+          disabled={initialLoading || refreshing}
+        >
+          {refreshing ? "Refreshing…" : "Refresh"}
         </Button>
       </div>
 
-      {loading && <MusicHomeDiscoverySkeletons />}
+      {initialLoading && <MusicHomeDiscoverySkeletons />}
 
-      {degraded && !loading && (
+      {degraded && showContent && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-900 dark:text-amber-100">
           Database connection was unstable. Showing available cached data where possible.
         </div>
       )}
 
-      {error && (
+      {error && showContent && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
-      {!loading && !hasLocalData && !error && <MusicOnboarding />}
+      {showContent && !hasLocalData && !error && <MusicOnboarding />}
 
-      {!loading && continueTrack && (
+      {showContent && continueTrack && (
         <MusicSection
           title="Continue listening"
           description="Resume your current session or last played track."
@@ -149,7 +176,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && recent.length > 0 && (
+      {showContent && recent.length > 0 && (
         <MusicSection
           title="Recently played"
           action={<ShufflePlayButton tracks={recent} />}
@@ -158,7 +185,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && mostPlayed.length > 0 && (
+      {showContent && mostPlayed.length > 0 && (
         <MusicSection
           title="Most played"
           description="Your top tracks by play count."
@@ -175,7 +202,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && favorites.length > 0 && (
+      {showContent && favorites.length > 0 && (
         <MusicSection
           title="Favorites"
           action={
@@ -191,7 +218,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && playlists.length > 0 && (
+      {showContent && playlists.length > 0 && (
         <MusicSection
           title="Your playlists"
           action={
@@ -217,7 +244,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && recommendations.length > 0 && (
+      {showContent && recommendations.length > 0 && (
         <MusicSection
           title="Recommended for you"
           description="Personal picks from your library and cached discoveries."
@@ -233,7 +260,7 @@ export function MusicHomeDiscovery() {
         </MusicSection>
       )}
 
-      {!loading && discoveries.length > 0 && (
+      {showContent && discoveries.length > 0 && (
         <MusicSection
           title="Cached discoveries"
           description="Tracks from previous searches — no new YouTube API calls."
