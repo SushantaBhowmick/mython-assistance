@@ -12,6 +12,8 @@ function isPublicPath(pathname: string) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/automation/webhook") ||
     pathname.startsWith("/icons") ||
     pathname.startsWith("/firebase-messaging-config.js") ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|webp|js|css|woff2?)$/)
