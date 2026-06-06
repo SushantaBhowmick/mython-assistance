@@ -11,9 +11,11 @@ import {
   updateMediaSessionPositionState,
 } from "@/lib/media-session";
 import {
+  initBackgroundTrackWatch,
   onPlaybackStarted,
   onPlaybackStopped,
 } from "@/lib/player/background-playback";
+import { isBackgroundAudioActive } from "@/lib/player/background-audio-engine";
 import {
   engineNext,
   enginePauseStore,
@@ -44,13 +46,22 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
     });
 
     // Imperative sync outside React — lock-screen controls work when the page is backgrounded.
-    return usePlayerStore.subscribe((state, prev) => {
+    const unsubTrack = initBackgroundTrackWatch();
+
+    const unsubStore = usePlayerStore.subscribe((state, prev) => {
       if (!state.hasHydrated) return;
-      if (!playerController.isReady() || !state.currentTrack) return;
+      if (!state.currentTrack) return;
 
       const videoChanged = state.currentTrack.videoId !== prev.currentTrack?.videoId;
       const started = state.isPlaying && !prev.isPlaying;
       const stopped = !state.isPlaying && prev.isPlaying;
+
+      if (isBackgroundAudioActive()) {
+        if (stopped) onPlaybackStopped();
+        return;
+      }
+
+      if (!playerController.isReady()) return;
 
       if (videoChanged && state.isPlaying) {
         enginePlay(
@@ -66,6 +77,11 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
         onPlaybackStopped();
       }
     });
+
+    return () => {
+      unsubTrack();
+      unsubStore();
+    };
   }, []);
 
   useEffect(() => {

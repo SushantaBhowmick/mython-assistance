@@ -10,6 +10,24 @@ const querySchema = z.object({
   videoId: z.string().min(6).max(20),
 });
 
+export async function HEAD(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const parsed = querySchema.safeParse({
+      videoId: searchParams.get("videoId") ?? "",
+    });
+
+    if (!parsed.success) {
+      return new Response(null, { status: 400 });
+    }
+
+    await resolveYouTubeAudioStream(parsed.data.videoId);
+    return new Response(null, { status: 200 });
+  } catch {
+    return new Response(null, { status: 502 });
+  }
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

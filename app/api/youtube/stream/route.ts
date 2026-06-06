@@ -1,6 +1,5 @@
 import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonOk } from "@/lib/api/response";
-import { resolveYouTubeAudioStream } from "@/lib/youtube/stream-resolve";
 import { z } from "zod";
 
 const querySchema = z.object({
@@ -19,9 +18,8 @@ export async function GET(request: Request) {
     }
 
     const { videoId } = parsed.data;
-    await resolveYouTubeAudioStream(videoId);
 
-    // Proxy URL — googlevideo links are IP-bound to the server that resolved them.
+    // Return immediately — /api/youtube/play resolves the upstream stream on demand.
     return jsonOk({
       url: `/api/youtube/play?videoId=${encodeURIComponent(videoId)}`,
       mimeType: "audio/mp4",

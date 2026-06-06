@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 
+import { isBackgroundAudioActive, seekBackgroundAudio } from "@/lib/player/background-audio-engine";
 import { playerController } from "@/lib/player/player-controller";
 import type { MusicTrack } from "@/types/music";
 
@@ -270,7 +271,9 @@ export const usePlayerStore = create<PlayerStore>()(
         const { duration } = get();
         const clamped = clampTime(seconds, duration);
 
-        if (playerController.isReady()) {
+        if (isBackgroundAudioActive()) {
+          seekBackgroundAudio(clamped);
+        } else if (playerController.isReady()) {
           playerController.seekTo(clamped);
         }
 

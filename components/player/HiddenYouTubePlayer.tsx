@@ -4,6 +4,11 @@ import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
 import {
+  isBackgroundAudioActive,
+  startBackgroundAudio,
+  resumeBackgroundAudio,
+} from "@/lib/player/background-audio-engine";
+import {
   forceBackgroundResume,
   getLoadedVideoId,
   onPlaybackStarted,
@@ -90,9 +95,19 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
             if (document.visibilityState === "hidden") {
               snapshotMediaSession();
-              forceBackgroundResume();
-              window.setTimeout(() => forceBackgroundResume(), 200);
-              window.setTimeout(() => forceBackgroundResume(), 600);
+              void (async () => {
+                if (isBackgroundAudioActive()) {
+                  await resumeBackgroundAudio();
+                  return;
+                }
+                const track = store.currentTrack;
+                if (!track) return;
+                const ok = await startBackgroundAudio(track.videoId, store.lastKnownTime);
+                if (!ok) {
+                  forceBackgroundResume();
+                  window.setTimeout(() => forceBackgroundResume(), 300);
+                }
+              })();
               return;
             }
 
@@ -168,6 +183,7 @@ export function HiddenYouTubePlayer() {
 
   useEffect(() => {
     if (!isReady || !currentTrack) return;
+    if (isBackgroundAudioActive()) return;
     if (getLoadedVideoId() !== currentTrack.videoId) return;
     if (prevIsPlayingRef.current === isPlaying) return;
 
