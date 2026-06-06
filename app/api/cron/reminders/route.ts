@@ -3,11 +3,22 @@ import { NextResponse } from "next/server";
 import { dispatchDueRemindersForUser } from "@/lib/notifications/dispatch-due-reminders";
 import { prisma } from "@/lib/prisma/client";
 
+function isCronAuthorized(request: Request, secret: string | undefined) {
+  if (!secret) return false;
+
+  const auth = request.headers.get("authorization");
+  if (auth === `Bearer ${secret}`) return true;
+
+  const cronHeader = request.headers.get("x-cron-secret");
+  if (cronHeader === secret) return true;
+
+  return false;
+}
+
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  const auth = request.headers.get("authorization");
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  if (!isCronAuthorized(request, secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
