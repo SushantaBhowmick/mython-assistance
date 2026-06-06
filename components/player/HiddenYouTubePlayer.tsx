@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
-import { shouldIgnoreBackgroundPause } from "@/lib/player/background-playback";
+import { enginePlay } from "@/lib/player/engine-sync";
 import { playerController } from "@/lib/player/player-controller";
 import {
   loadYouTubeIframeApi,
@@ -16,13 +16,11 @@ import { usePlayerStore } from "@/store/player-store";
 let playerInitPromise: Promise<void> | null = null;
 let suppressYtEvents = false;
 
-function setSuppressYtEvents(value: boolean, ms = 300) {
-  suppressYtEvents = value;
-  if (value) {
-    window.setTimeout(() => {
-      suppressYtEvents = false;
-    }, ms);
-  }
+function setSuppressYtEvents(ms = 300) {
+  suppressYtEvents = true;
+  window.setTimeout(() => {
+    suppressYtEvents = false;
+  }, ms);
 }
 
 function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
@@ -54,6 +52,10 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           const store = usePlayerStore.getState();
           event.target.setVolume(store.volume);
           if (store.muted) event.target.mute();
+
+          if (store.currentTrack && store.isPlaying) {
+            enginePlay(store.currentTrack, store.lastKnownTime);
+          }
         },
         onStateChange: (event: { data: number }) => {
           if (suppressYtEvents) return;
@@ -63,6 +65,12 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
 
           if (event.data === YT_PLAYER_STATE.ENDED) {
             usePlayerStore.getState().next();
+            window.setTimeout(() => {
+              const { currentTrack, isPlaying } = usePlayerStore.getState();
+              if (currentTrack && isPlaying) {
+                enginePlay(currentTrack, 0);
+              }
+            }, 0);
             return;
           }
 
@@ -72,11 +80,7 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
             usePlayerStore.setState({ isPlaying: true });
           }
 
-          if (
-            event.data === YT_PLAYER_STATE.PAUSED &&
-            store.isPlaying &&
-            !shouldIgnoreBackgroundPause(store.isPlaying, event.data)
-          ) {
+          if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
             usePlayerStore.setState({ isPlaying: false });
           }
         },
@@ -122,7 +126,7 @@ export function HiddenYouTubePlayer() {
 
     if (loadedVideoIdRef.current === videoId) {
       if (shouldPlay) {
-        setSuppressYtEvents(true, 400);
+        setSuppressYtEvents(400);
         playerController.play();
         prevIsPlayingRef.current = true;
       }
@@ -133,7 +137,7 @@ export function HiddenYouTubePlayer() {
     lastRecordedRef.current = null;
     prevIsPlayingRef.current = null;
 
-    setSuppressYtEvents(true, 800);
+    setSuppressYtEvents(800);
 
     if (shouldPlay) {
       playerController.loadVideo(videoId, startAt);
@@ -149,7 +153,7 @@ export function HiddenYouTubePlayer() {
     if (prevIsPlayingRef.current === isPlaying) return;
 
     prevIsPlayingRef.current = isPlaying;
-    setSuppressYtEvents(true, 400);
+    setSuppressYtEvents(400);
 
     if (isPlaying) {
       playerController.play();
@@ -204,10 +208,10 @@ export function HiddenYouTubePlayer() {
 
   return (
     <div
-      className="pointer-events-none fixed bottom-0 right-0 z-0 h-px w-px overflow-hidden opacity-[0.01]"
+      className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-px w-px overflow-hidden opacity-0"
       aria-hidden
     >
-      <div ref={mountRef} className="h-px w-px" />
+      <div ref={mountRef} />
     </div>
   );
 }

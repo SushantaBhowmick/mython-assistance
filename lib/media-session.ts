@@ -21,12 +21,16 @@ export function registerMediaSessionActions(nextHandlers: MediaSessionHandlers) 
 
   handlers = nextHandlers;
 
-  navigator.mediaSession.setActionHandler("play", () => handlers?.onPlay());
-  navigator.mediaSession.setActionHandler("pause", () => handlers?.onPause());
-  navigator.mediaSession.setActionHandler("previoustrack", () =>
-    handlers?.onPrevious(),
-  );
-  navigator.mediaSession.setActionHandler("nexttrack", () => handlers?.onNext());
+  try {
+    navigator.mediaSession.setActionHandler("play", () => handlers?.onPlay());
+    navigator.mediaSession.setActionHandler("pause", () => handlers?.onPause());
+    navigator.mediaSession.setActionHandler("previoustrack", () =>
+      handlers?.onPrevious(),
+    );
+    navigator.mediaSession.setActionHandler("nexttrack", () => handlers?.onNext());
+  } catch {
+    // Some browsers reject handlers until media is playing.
+  }
   navigator.mediaSession.setActionHandler("seekbackward", () =>
     handlers?.onSeekBackward(),
   );

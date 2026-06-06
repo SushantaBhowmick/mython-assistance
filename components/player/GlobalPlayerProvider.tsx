@@ -4,9 +4,16 @@ import { useEffect } from "react";
 
 import { HiddenYouTubePlayer } from "@/components/player/HiddenYouTubePlayer";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
+import {
+  engineNext,
+  enginePauseStore,
+  enginePlay,
+  enginePrevious,
+  engineResume,
+} from "@/lib/player/engine-sync";
+import { playerController } from "@/lib/player/player-controller";
 import { usePlaybackRecovery } from "@/lib/player/use-playback-recovery";
 import {
-  clearMediaSessionActions,
   registerMediaSessionActions,
   updateMediaSessionMetadata,
   updateMediaSessionPlaybackState,
@@ -24,16 +31,34 @@ export function GlobalPlayerProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     registerMediaSessionActions({
-      onPlay: () => usePlayerStore.getState().resume(),
-      onPause: () => usePlayerStore.getState().pause(),
-      onPrevious: () => usePlayerStore.getState().previous(),
-      onNext: () => usePlayerStore.getState().next(),
+      onPlay: () => engineResume(),
+      onPause: () => enginePauseStore(),
+      onPrevious: () => enginePrevious(),
+      onNext: () => engineNext(),
       onSeekBackward: () => usePlayerStore.getState().skipBy(-10),
       onSeekForward: () => usePlayerStore.getState().skipBy(10),
       onSeekTo: (time) => usePlayerStore.getState().seekTo(time),
     });
 
-    return () => clearMediaSessionActions();
+    // Sync YouTube engine outside React — lock-screen controls work when the page is backgrounded.
+    return usePlayerStore.subscribe((state, prev) => {
+      if (!playerController.isReady() || !state.currentTrack) return;
+
+      const videoChanged = state.currentTrack.videoId !== prev.currentTrack?.videoId;
+      const started = state.isPlaying && !prev.isPlaying;
+      const stopped = !state.isPlaying && prev.isPlaying;
+
+      if (videoChanged && state.isPlaying) {
+        enginePlay(
+          state.currentTrack,
+          state.lastKnownTime > 0 ? state.lastKnownTime : 0,
+        );
+      } else if (started) {
+        playerController.play();
+      } else if (stopped) {
+        playerController.pause();
+      }
+    });
   }, []);
 
   useEffect(() => {

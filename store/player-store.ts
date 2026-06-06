@@ -167,10 +167,12 @@ export const usePlayerStore = create<PlayerStore>()(
       },
 
       selectTrack: (track, queue) => {
-        const { currentTrack } = get();
+        const { currentTrack, lastKnownTime } = get();
         if (currentTrack?.videoId === track.videoId) {
           get().resume();
           if (playerController.isReady()) {
+            const startAt = lastKnownTime > 0 ? lastKnownTime : 0;
+            playerController.loadVideo(track.videoId, startAt);
             playerController.play();
           }
           return;
