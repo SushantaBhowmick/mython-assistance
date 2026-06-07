@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 
 import { recordHistory } from "@/lib/music/api-client";
+import { nudgeBackgroundPlayback } from "@/lib/player/background-resume";
+import { consumeUserPause } from "@/lib/player/pause-intent";
 import { playerController } from "@/lib/player/player-controller";
 import {
   loadYouTubeIframeApi,
@@ -24,8 +26,8 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
     if (playerController.isReady()) return;
 
     new window.YT.Player(container, {
-      height: "0",
-      width: "0",
+      height: "1",
+      width: "1",
       playerVars: {
         autoplay: 0,
         controls: 0,
@@ -62,7 +64,17 @@ function ensureYouTubePlayer(container: HTMLElement): Promise<void> {
           }
 
           if (event.data === YT_PLAYER_STATE.PAUSED && store.isPlaying) {
-            usePlayerStore.setState({ isPlaying: false });
+            if (consumeUserPause()) {
+              usePlayerStore.setState({ isPlaying: false });
+              return;
+            }
+
+            // OS suspend — keep playing intent and nudge the iframe.
+            suppressYtEventsRef.current = true;
+            nudgeBackgroundPlayback();
+            window.setTimeout(() => {
+              suppressYtEventsRef.current = false;
+            }, 200);
           }
         },
       },
@@ -185,10 +197,10 @@ export function HiddenYouTubePlayer() {
 
   return (
     <div
-      className="pointer-events-none fixed -left-[9999px] -top-[9999px] h-px w-px overflow-hidden opacity-0"
+      className="pointer-events-none fixed bottom-0 left-0 z-0 h-px w-px overflow-hidden opacity-[0.01]"
       aria-hidden
     >
-      <div ref={mountRef} />
+      <div ref={mountRef} className="h-px w-px" />
     </div>
   );
 }

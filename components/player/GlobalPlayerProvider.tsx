@@ -11,9 +11,22 @@ import {
   updateMediaSessionPlaybackState,
   updateMediaSessionPositionState,
 } from "@/lib/media-session";
+import { useBackgroundGuard } from "@/lib/player/use-background-guard";
 import { usePlayerStore } from "@/store/player-store";
 
 export function GlobalPlayerProvider({ children }: { children: React.ReactNode }) {
+  useBackgroundGuard();
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development") {
+      (
+        window as Window & {
+          __MYTHON_PLAYER_TEST__?: typeof usePlayerStore;
+        }
+      ).__MYTHON_PLAYER_TEST__ = usePlayerStore;
+    }
+  }, []);
+
   const currentTrack = usePlayerStore((s) => s.currentTrack);
   const isPlaying = usePlayerStore((s) => s.isPlaying);
   const duration = usePlayerStore((s) => s.duration);

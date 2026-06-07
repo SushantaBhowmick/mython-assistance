@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist, type StateStorage } from "zustand/middleware";
 
+import { clearUserPause, markUserPause } from "@/lib/player/pause-intent";
 import { playerController } from "@/lib/player/player-controller";
 import type { MusicTrack } from "@/types/music";
 
@@ -168,6 +169,7 @@ export const usePlayerStore = create<PlayerStore>()(
       },
 
       playTrack: (track, queue, startAt = 0) => {
+        clearUserPause();
         const nextQueue = queue ?? get().queue;
         const queueState = buildQueueState(track, nextQueue, get().shuffleEnabled);
 
@@ -249,11 +251,13 @@ export const usePlayerStore = create<PlayerStore>()(
       },
 
       pause: () => {
+        markUserPause();
         set({ isPlaying: false, playerState: "paused" });
       },
 
       resume: () => {
         if (!get().currentTrack) return;
+        clearUserPause();
         set({ isPlaying: true, playerState: "playing" });
       },
 
