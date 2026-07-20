@@ -40,24 +40,46 @@ export async function GET(request: Request) {
     }
 
     const { videoId } = parsed.data;
-    const cached = getCachedUpstreamStream(videoId) ?? (await resolveYouTubeAudioStream(videoId));
+    let stream = getCachedUpstreamStream(videoId) ?? (await resolveYouTubeAudioStream(videoId));
 
     const range = request.headers.get("range");
-    const upstream = await fetch(cached.url, {
-      headers: range ? { Range: range } : undefined,
-      cache: "no-store",
-    });
+    // googlevideo rejects bare fetches — match the iOS client used by stream-resolve.
+    const upstreamHeaders: Record<string, string> = {
+      "User-Agent":
+        "com.google.ios.youtube/19.29.1 (iPhone16,2; U; CPU iOS 17_5_1 like Mac OS X;)",
+      Accept: "*/*",
+    };
+    if (range) upstreamHeaders.Range = range;
 
+    async function fetchUpstream(url: string) {
+      return fetch(url, {
+        headers: upstreamHeaders,
+        cache: "no-store",
+        redirect: "follow",
+      });
+    }
+
+    let upstream = await fetchUpstream(stream.url);
+
+    // Stale signed URL — re-resolve once and retry.
     if (!upstream.ok && upstream.status !== 206) {
       clearCachedUpstreamStream(videoId);
-      return Response.json(
-        { error: "Upstream stream unavailable" },
-        { status: upstream.status === 403 ? 502 : upstream.status },
-      );
+      stream = await resolveYouTubeAudioStream(videoId);
+      upstream = await fetchUpstream(stream.url);
+      if (!upstream.ok && upstream.status !== 206) {
+        clearCachedUpstreamStream(videoId);
+        return Response.json(
+          { error: "Upstream stream unavailable" },
+          { status: upstream.status === 403 ? 502 : upstream.status },
+        );
+      }
     }
 
     const headers = new Headers();
-    headers.set("Content-Type", cached.mimeType || upstream.headers.get("content-type") || "audio/mp4");
+    headers.set(
+      "Content-Type",
+      stream.mimeType || upstream.headers.get("content-type") || "audio/mp4",
+    );
     headers.set("Accept-Ranges", "bytes");
     headers.set("Cache-Control", "no-store");
 
