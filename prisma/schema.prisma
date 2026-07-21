@@ -230,22 +230,37 @@ model Bookmark {
 }
 
 model Task {
-  id           String       @id @default(cuid())
-  userId       String       @map("user_id")
-  title        String
-  description  String?      @db.Text
-  status       TaskStatus   @default(TODO)
-  priority     TaskPriority @default(MEDIUM)
-  dueAt        DateTime?    @map("due_at")
-  completedAt  DateTime?    @map("completed_at")
-  projectTag   String?      @map("project_tag")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-  reminders    Reminder[]
+  id                      String       @id @default(cuid())
+  userId                  String       @map("user_id")
+  title                   String
+  description             String?      @db.Text
+  status                  TaskStatus   @default(TODO)
+  priority                TaskPriority @default(MEDIUM)
+  dueAt                   DateTime?    @map("due_at")
+  completedAt             DateTime?    @map("completed_at")
+  projectTag              String?      @map("project_tag")
+  googleCalendarEventId   String?      @map("google_calendar_event_id")
+  googleCalendarSyncedAt  DateTime?    @map("google_calendar_synced_at")
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+  reminders               Reminder[]
 
   @@index([userId, status])
   @@index([userId, dueAt])
   @@map("tasks")
+}
+
+model GoogleCalendarConnection {
+  id           String    @id @default(cuid())
+  userId       String    @unique @map("user_id")
+  googleEmail  String    @map("google_email")
+  accessToken  String    @map("access_token") @db.Text
+  refreshToken String    @map("refresh_token") @db.Text
+  tokenExpiry  DateTime? @map("token_expiry")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("google_calendar_connections")
 }
 
 model Reminder {

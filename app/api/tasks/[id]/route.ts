@@ -1,6 +1,10 @@
 import { getUserId } from "@/lib/auth/user";
 import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import {
+  removeTaskFromGoogleCalendar,
+  syncTaskToGoogleCalendar,
+} from "@/lib/google/sync-task-event";
 import { updateTaskSchema } from "@/lib/tasks/schemas";
 import { serializeTaskDetail } from "@/lib/tasks/serialize";
 import { prisma, withPrismaRetry } from "@/lib/prisma/client";
@@ -53,7 +57,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       prisma.task.update({ where: { id }, data }),
     );
 
-    return jsonOk({ task: serializeTaskDetail(task) });
+    await syncTaskToGoogleCalendar(task);
+
+    const synced = await prisma.task.findFirst({ where: { id, userId } });
+
+    return jsonOk({ task: serializeTaskDetail(synced ?? task) });
   } catch (error) {
     return handleRouteError(error, "[tasks/id/patch]");
   }
@@ -67,6 +75,7 @@ export async function DELETE(_request: Request, context: RouteContext) {
     const existing = await prisma.task.findFirst({ where: { id, userId } });
     if (!existing) return jsonError("Task not found", 404, "NOT_FOUND");
 
+    await removeTaskFromGoogleCalendar(existing);
     await withPrismaRetry(() => prisma.task.delete({ where: { id } }));
 
     return jsonOk({ ok: true });

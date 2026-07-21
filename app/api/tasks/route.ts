@@ -1,6 +1,7 @@
 import { getUserId } from "@/lib/auth/user";
 import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonError, jsonOk } from "@/lib/api/response";
+import { syncTaskToGoogleCalendar } from "@/lib/google/sync-task-event";
 import { createTaskSchema, listTasksQuerySchema } from "@/lib/tasks/schemas";
 import { buildTaskListWhere, serializeTask, serializeTaskDetail } from "@/lib/tasks/serialize";
 import { prisma, safePrismaRead, withPrismaRetry } from "@/lib/prisma/client";
@@ -81,7 +82,11 @@ export async function POST(request: Request) {
       }),
     );
 
-    return jsonOk({ task: serializeTaskDetail(task) }, 201);
+    await syncTaskToGoogleCalendar(task);
+
+    const synced = await prisma.task.findFirst({ where: { id: task.id, userId } });
+
+    return jsonOk({ task: serializeTaskDetail(synced ?? task) }, 201);
   } catch (error) {
     return handleRouteError(error, "[tasks/post]");
   }
