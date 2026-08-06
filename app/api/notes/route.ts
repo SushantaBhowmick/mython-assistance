@@ -3,11 +3,13 @@ import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { createNoteSchema, listNotesQuerySchema } from "@/lib/notes/schemas";
 import { serializeNoteDetail, serializeNoteSummary } from "@/lib/notes/serialize";
+import { requireNotesUnlocked } from "@/lib/notes/vault";
 import { prisma, safePrismaRead, withPrismaRetry } from "@/lib/prisma/client";
 
 export async function GET(request: Request) {
   try {
     const userId = await getUserId();
+    await requireNotesUnlocked(userId);
     const { searchParams } = new URL(request.url);
     const parsed = listNotesQuerySchema.safeParse({
       q: searchParams.get("q") ?? undefined,
@@ -64,6 +66,7 @@ export async function POST(request: Request) {
     }
 
     const userId = await getUserId();
+    await requireNotesUnlocked(userId);
 
     const note = await withPrismaRetry(() =>
       prisma.note.create({

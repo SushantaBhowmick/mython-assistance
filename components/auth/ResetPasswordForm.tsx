@@ -1,44 +1,50 @@
 "use client";
 
-import Link from "next/link";
-import { Loader2, Lock, Mail } from "lucide-react";
-
-import { BrandMark } from "@/components/shell/BrandMark";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Loader2, Lock } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { BrandMark } from "@/components/shell/BrandMark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm() {
+export function ResetPasswordForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") ?? "/dashboard";
-
-  const [email, setEmail] = useState("bhosushanta922@gmail.com");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
 
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (password !== confirm) {
+      toast.error("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
         toast.error(error.message);
         return;
       }
 
-      router.replace(next);
+      toast.success("Password updated. You can sign in with the new password.");
+      router.replace("/dashboard");
       router.refresh();
     } catch {
-      toast.error("Could not sign in. Check your connection.");
+      toast.error("Could not update password.");
     } finally {
       setLoading(false);
     }
@@ -62,9 +68,7 @@ export function LoginForm() {
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <BrandMark size="lg" link={false} className="mb-4" />
-          <p className="text-sm text-muted-foreground">
-            Personal OS — sign in to your private workspace
-          </p>
+          <p className="text-sm text-muted-foreground">Choose a new password for your workspace</p>
         </div>
 
         <form
@@ -72,43 +76,37 @@ export function LoginForm() {
           className="space-y-5 rounded-2xl border bg-card/70 p-6 shadow-xl backdrop-blur-md sm:p-8"
         >
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="new-password">New password</Label>
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                id="email"
-                type="email"
-                autoComplete="email"
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="h-11 pl-9"
-                placeholder="you@email.com"
+                placeholder="At least 8 characters"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-muted-foreground underline-offset-4 hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
+            <Label htmlFor="confirm-password">Confirm password</Label>
             <div className="relative">
               <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                id="password"
+                id="confirm-password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete="new-password"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                minLength={8}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
                 className="h-11 pl-9"
-                placeholder="Your password"
+                placeholder="Repeat new password"
               />
             </div>
           </div>
@@ -117,16 +115,12 @@ export function LoginForm() {
             {loading ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                Signing in…
+                Saving…
               </>
             ) : (
-              "Sign in"
+              "Save new password"
             )}
           </Button>
-
-          <p className="text-center text-xs text-muted-foreground">
-            Single-owner system. No public registration. Session stays active on this device.
-          </p>
         </form>
       </div>
     </div>

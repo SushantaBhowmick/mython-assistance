@@ -13,7 +13,7 @@ export function NotesLayout({ children }: { children: React.ReactNode }) {
       <ServicePageHeader
         eyebrow="Knowledge"
         title="Notes"
-        description="Markdown notes, tags, and your second brain."
+        description="Password-locked markdown notes for confidential knowledge."
         icon={StickyNote}
         actions={
           <Button asChild>

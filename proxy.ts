@@ -2,7 +2,13 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { updateSession } from "./lib/supabase/proxy-session";
 
-const PUBLIC_PATHS = ["/login", "/offline", "/manifest.webmanifest"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/forgot-password",
+  "/auth/callback",
+  "/offline",
+  "/manifest.webmanifest",
+];
 
 function isPublicPath(pathname: string) {
   if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {

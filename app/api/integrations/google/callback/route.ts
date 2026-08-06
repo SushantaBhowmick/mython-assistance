@@ -1,22 +1,31 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { getUserId } from "@/lib/auth/user";
 import { handleRouteError } from "@/lib/api/handle-route-error";
-import { exchangeGoogleCode } from "@/lib/google/calendar-oauth";
+import {
+  consumeOAuthState,
+  exchangeGoogleCode,
+} from "@/lib/google/calendar-oauth";
 import { getAppBaseUrl, isGoogleCalendarConfigured } from "@/lib/google/env";
 import { prisma } from "@/lib/prisma/client";
 
-function settingsRedirect(query: string) {
-  return NextResponse.redirect(
-    `${getAppBaseUrl()}/settings/integrations?${query}`,
-  );
+function settingsRedirect(request: Request, query: string) {
+  try {
+    const url = new URL(request.url);
+    return NextResponse.redirect(
+      `${url.origin}/settings/integrations?${query}`,
+    );
+  } catch {
+    return NextResponse.redirect(
+      `${getAppBaseUrl()}/settings/integrations?${query}`,
+    );
+  }
 }
 
 export async function GET(request: Request) {
   try {
     if (!isGoogleCalendarConfigured()) {
-      return settingsRedirect("google=error&reason=not_configured");
+      return settingsRedirect(request, "google=error&reason=not_configured");
     }
 
     const userId = await getUserId();
@@ -25,34 +34,38 @@ export async function GET(request: Request) {
     const state = searchParams.get("state");
     const oauthError = searchParams.get("error");
 
+    console.info("[integrations/google/callback]", {
+      userId,
+      origin: new URL(request.url).origin,
+      hasCode: Boolean(code),
+      statePreview: state ? `${state.slice(0, 8)}…(${state.length})` : null,
+      oauthError,
+    });
+
     if (oauthError) {
-      return settingsRedirect(`google=error&reason=${encodeURIComponent(oauthError)}`);
+      return settingsRedirect(
+        request,
+        `google=error&reason=${encodeURIComponent(oauthError)}`,
+      );
     }
 
     if (!code || !state) {
-      return settingsRedirect("google=error&reason=missing_code");
+      return settingsRedirect(request, "google=error&reason=missing_code");
     }
 
-    const cookieStore = await cookies();
-    const storedState = cookieStore.get("gcal_oauth_state")?.value;
-    if (!storedState || storedState !== state) {
-      return settingsRedirect("google=error&reason=invalid_state");
+    const verified = await consumeOAuthState(userId, state);
+    if (!verified.ok) {
+      console.warn(
+        "[integrations/google/callback] state rejected",
+        verified.reason,
+      );
+      return settingsRedirect(
+        request,
+        `google=error&reason=${verified.reason}`,
+      );
     }
 
-    let parsed: { userId?: string };
-    try {
-      parsed = JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as {
-        userId?: string;
-      };
-    } catch {
-      return settingsRedirect("google=error&reason=invalid_state");
-    }
-
-    if (parsed.userId !== userId) {
-      return settingsRedirect("google=error&reason=user_mismatch");
-    }
-
-    const tokens = await exchangeGoogleCode(code);
+    const tokens = await exchangeGoogleCode(code, verified.redirectUri);
 
     const existing = await prisma.googleCalendarConnection.findUnique({
       where: { userId },
@@ -60,7 +73,10 @@ export async function GET(request: Request) {
     });
     const refreshToken = tokens.refreshToken ?? existing?.refreshToken;
     if (!refreshToken) {
-      return settingsRedirect("google=error&reason=missing_refresh_token");
+      return settingsRedirect(
+        request,
+        "google=error&reason=missing_refresh_token",
+      );
     }
 
     await prisma.googleCalendarConnection.upsert({
@@ -80,17 +96,15 @@ export async function GET(request: Request) {
       },
     });
 
-    const response = settingsRedirect("google=connected");
-    response.cookies.set("gcal_oauth_state", "", {
-      httpOnly: true,
-      path: "/",
-      maxAge: 0,
-    });
-    return response;
+    console.info(
+      "[integrations/google/callback] connected",
+      tokens.googleEmail,
+    );
+    return settingsRedirect(request, "google=connected");
   } catch (error) {
     console.error("[integrations/google/callback]", error);
     try {
-      return settingsRedirect("google=error&reason=exchange_failed");
+      return settingsRedirect(request, "google=error&reason=exchange_failed");
     } catch {
       return handleRouteError(error, "[integrations/google/callback]");
     }

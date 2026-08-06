@@ -53,7 +53,7 @@ export function ChangePasswordForm() {
       <CardHeader>
         <CardTitle className="text-base">Change password</CardTitle>
         <CardDescription>
-          Update your login password for this device. Forgot-password email is not enabled yet.
+          Update your login password. If you are locked out, use Forgot password on the sign-in page.
         </CardDescription>
       </CardHeader>
       <CardContent>

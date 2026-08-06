@@ -3,6 +3,7 @@ import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonError, jsonOk } from "@/lib/api/response";
 import { updateNoteSchema } from "@/lib/notes/schemas";
 import { serializeNoteDetail } from "@/lib/notes/serialize";
+import { requireNotesUnlocked } from "@/lib/notes/vault";
 import { prisma, withPrismaRetry } from "@/lib/prisma/client";
 
 interface RouteContext {
@@ -12,6 +13,7 @@ interface RouteContext {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const userId = await getUserId();
+    await requireNotesUnlocked(userId);
     const { id } = await context.params;
 
     const note = await prisma.note.findFirst({
@@ -31,6 +33,7 @@ export async function GET(_request: Request, context: RouteContext) {
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const userId = await getUserId();
+    await requireNotesUnlocked(userId);
     const { id } = await context.params;
     const body = await request.json();
     const parsed = updateNoteSchema.safeParse(body);
@@ -63,6 +66,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const userId = await getUserId();
+    await requireNotesUnlocked(userId);
     const { id } = await context.params;
 
     const existing = await prisma.note.findFirst({

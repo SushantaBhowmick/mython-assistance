@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 
 import { getUserId } from "@/lib/auth/user";
 import { handleRouteError } from "@/lib/api/handle-route-error";
 import { jsonError } from "@/lib/api/response";
-import { getGoogleAuthUrl } from "@/lib/google/calendar-oauth";
-import { isGoogleCalendarConfigured } from "@/lib/google/env";
+import {
+  createAndStoreOAuthState,
+  getGoogleAuthUrl,
+} from "@/lib/google/calendar-oauth";
+import {
+  getGoogleRedirectUriForOrigin,
+  getRequestOrigin,
+  isGoogleCalendarConfigured,
+} from "@/lib/google/env";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     if (!isGoogleCalendarConfigured()) {
       return jsonError(
@@ -18,21 +24,19 @@ export async function GET() {
     }
 
     const userId = await getUserId();
-    const nonce = randomBytes(16).toString("hex");
-    const state = Buffer.from(JSON.stringify({ userId, nonce })).toString(
-      "base64url",
-    );
+    const origin = getRequestOrigin(request);
+    const redirectUri = getGoogleRedirectUriForOrigin(origin);
+    const state = await createAndStoreOAuthState(userId, redirectUri);
+    const url = getGoogleAuthUrl(state, redirectUri);
 
-    const url = getGoogleAuthUrl(state);
-    const response = NextResponse.redirect(url);
-    response.cookies.set("gcal_oauth_state", state, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      path: "/",
-      maxAge: 60 * 10,
+    console.info("[integrations/google/connect]", {
+      userId,
+      origin,
+      redirectUri,
+      stateLen: state.length,
     });
-    return response;
+
+    return NextResponse.redirect(url);
   } catch (error) {
     return handleRouteError(error, "[integrations/google/connect]");
   }

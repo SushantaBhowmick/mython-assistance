@@ -4,6 +4,7 @@ import { jsonError, jsonOk } from "@/lib/api/response";
 import { prisma, safePrismaRead } from "@/lib/prisma/client";
 import { serializeBookmark } from "@/lib/bookmarks/serialize";
 import { serializeNoteSummary } from "@/lib/notes/serialize";
+import { isNotesUnlocked } from "@/lib/notes/vault";
 import { serializeReminder } from "@/lib/reminders/serialize";
 import { reminderInclude } from "@/lib/reminders/serialize";
 import { serializeTask } from "@/lib/tasks/serialize";
@@ -12,6 +13,7 @@ import { globalSearchQuerySchema } from "@/lib/search/schemas";
 export async function GET(request: Request) {
   try {
     const userId = await getUserId();
+    const notesUnlocked = await isNotesUnlocked(userId);
     const { searchParams } = new URL(request.url);
     const parsed = globalSearchQuerySchema.safeParse({
       q: searchParams.get("q") ?? "",
@@ -39,17 +41,19 @@ export async function GET(request: Request) {
             take: limit,
             orderBy: { updatedAt: "desc" },
           }),
-          prisma.note.findMany({
-            where: {
-              userId,
-              OR: [
-                { title: { contains: term, mode: "insensitive" } },
-                { body: { contains: term, mode: "insensitive" } },
-              ],
-            },
-            take: limit,
-            orderBy: { updatedAt: "desc" },
-          }),
+          notesUnlocked
+            ? prisma.note.findMany({
+                where: {
+                  userId,
+                  OR: [
+                    { title: { contains: term, mode: "insensitive" } },
+                    { body: { contains: term, mode: "insensitive" } },
+                  ],
+                },
+                take: limit,
+                orderBy: { updatedAt: "desc" },
+              })
+            : Promise.resolve([]),
           prisma.reminder.findMany({
             where: {
               userId,

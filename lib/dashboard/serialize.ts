@@ -3,6 +3,7 @@ import { ReminderStatus, TaskStatus } from "@prisma/client";
 
 import type { DashboardSummary } from "@/modules/dashboard/types";
 import { serializeNoteSummary } from "@/lib/notes/serialize";
+import { isNotesUnlocked } from "@/lib/notes/vault";
 import { serializeReminder, reminderInclude, getEffectiveRemindAt } from "@/lib/reminders/serialize";
 import { serializeTask } from "@/lib/tasks/serialize";
 import { prisma } from "@/lib/prisma/client";
@@ -21,6 +22,7 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
   const todayStart = startOfDay(now);
   const todayEnd = endOfDay(now);
   const weekEnd = endOfDay(addDays(now, 7));
+  const notesUnlocked = await isNotesUnlocked(userId);
 
   const [
     profile,
@@ -64,22 +66,26 @@ export async function loadDashboardSummary(userId: string): Promise<DashboardSum
       orderBy: { remindAt: "asc" },
       take: 20,
     }),
-    prisma.note.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-    }),
-    prisma.note.findMany({
-      where: { userId, pinned: true },
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-    }),
+    notesUnlocked
+      ? prisma.note.findMany({
+          where: { userId },
+          orderBy: { updatedAt: "desc" },
+          take: 3,
+        })
+      : Promise.resolve([]),
+    notesUnlocked
+      ? prisma.note.findMany({
+          where: { userId, pinned: true },
+          orderBy: { updatedAt: "desc" },
+          take: 3,
+        })
+      : Promise.resolve([]),
     prisma.trackStats.findFirst({
       where: { userId },
       include: { track: true },
       orderBy: { lastPlayedAt: "desc" },
     }),
-    prisma.note.count({ where: { userId } }),
+    notesUnlocked ? prisma.note.count({ where: { userId } }) : Promise.resolve(0),
     prisma.bookmark.count({ where: { userId } }),
     prisma.reminder.count({
       where: {

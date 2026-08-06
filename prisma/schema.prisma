@@ -25,10 +25,11 @@ model Profile {
   career       Json?
   experience   Json?
   education    Json?
-  projects        Json?
-  dashboardFocus  String?   @map("dashboard_focus")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  projects           Json?
+  dashboardFocus     String?   @map("dashboard_focus")
+  notesPasswordHash  String?   @map("notes_password_hash")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   @@map("profiles")
 }
@@ -261,6 +262,17 @@ model GoogleCalendarConnection {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   @@map("google_calendar_connections")
+}
+
+/** Short-lived OAuth CSRF nonce for Google Calendar connect (no cookie needed). */
+model GoogleOAuthPending {
+  userId      String   @id @map("user_id")
+  state       String
+  redirectUri String   @default("") @map("redirect_uri")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("google_oauth_pending")
 }
 
 model Reminder {

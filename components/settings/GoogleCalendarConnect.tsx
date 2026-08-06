@@ -51,7 +51,17 @@ export function GoogleCalendarConnect() {
       void loadStatus();
     } else if (result === "error") {
       const reason = searchParams.get("reason") ?? "unknown";
-      toast.error(`Google Calendar connect failed (${reason})`);
+      const hints: Record<string, string> = {
+        invalid_state: "OAuth state failed — try Connect again",
+        invalid_state_format: "OAuth state was malformed — try Connect again",
+        no_pending_state: "No pending connect — click Connect again (don’t reuse an old Google tab)",
+        state_mismatch: "OAuth state mismatch — click Connect again",
+        state_expired: "Connect link expired — click Connect again",
+        missing_refresh_token: "Google did not return a refresh token — revoke Mython access in Google Account and retry",
+        exchange_failed: "Token exchange failed — check Client ID/Secret and redirect URI",
+        missing_code: "Google did not return an auth code",
+      };
+      toast.error(hints[reason] ?? `Google Calendar connect failed (${reason})`);
     }
   }, [searchParams, loadStatus]);
 
