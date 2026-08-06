@@ -43,7 +43,8 @@ async function getConnectionAuth(userId: string) {
     }
   }
 
-  const auth = createGoogleOAuthClient();
+  // Redirect URI is unused for API calls with stored credentials.
+  const auth = createGoogleOAuthClient("https://localhost/oauth-refresh");
   auth.setCredentials({
     access_token: accessToken,
     refresh_token: refreshToken,
